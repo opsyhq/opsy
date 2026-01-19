@@ -1,0 +1,15 @@
+{
+  // EKS Operations Configuration
+  // Copy to ~/.opsy/opsy.jsonc or .opsy/opsy.jsonc
+  "instructions": [
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws.md",
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/kubectl.md",
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/helm.md"
+  ],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
