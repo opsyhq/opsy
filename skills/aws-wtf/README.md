@@ -32,8 +32,6 @@ Or manually add to `~/.opsy/opsy.jsonc`:
 
 ```bash
 opsy
-> /connect    # Connect with Claude/OpenAI
-> /aws        # Select AWS account
 > wtf is my aws bill
 ```
 
