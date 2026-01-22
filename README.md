@@ -18,12 +18,23 @@ curl -fsSL https://opsy.sh/install.sh | bash
 opsy
 ```
 
-Then in interactive mode:
+### Connecting to an LLM provider
 
+Supports 75+ LLM providers. connects with existing Claude or OpenAI subscriptions.
+
+```bash
+/connect
 ```
-> /connect          # Connect to an LLM provider
-> /aws              # Select AWS profile
-> why can't i reach my load balancer?
+
+### Selecting a cloud context
+
+```bash
+/aws
+```
+### Asking a question
+
+```bash
+why can't i reach my load balancer?
 ```
 
 ## Features
@@ -62,12 +73,16 @@ Skills teach opsy best practices for each tool. Add to `~/.opsy/opsy.jsonc`:
 ```json
 {
   "instructions": [
-    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/terraform.md",
-    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws.md",
-    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/kubectl.md",
-    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/helm.md"
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws-wtf/SKILL.md",
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws-finops/SKILL.md"
   ]
 }
+```
+
+**Or use npx to add skills:**
+```bash
+npx add-skill opsyhq/opsy --skill aws-wtf    # AWS bill breakdown
+npx add-skill opsyhq/opsy --skill aws-finops # Cost optimization
 ```
 
 See [skills/](./skills/) for all available skills.

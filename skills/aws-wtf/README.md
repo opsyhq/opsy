@@ -2,56 +2,39 @@
 
 Explains every charge on your AWS bill — what it is, why you're paying, and what resource caused it.
 
+Automatically generates a CSV report with every charge linked to a specific resource ARN, detects credit coverage, and enumerates resources across all regions.
+
 ![Usage Example](./usage.png)
 
-## Quick Start
+## Installation
 
-1. **Install opsy:**
-   ```bash
-   curl -fsSL https://opsy.sh/install.sh | bash
-   ```
+**Prerequisites:** [Install opsy first](../../README.md#installation)
 
-2. **Add the skill:**
-   ```bash
-   npx add-skill opsyhq/opsy --skill aws-wtf
-   ```
-   
-   Or manually add to `~/.opsy/opsy.jsonc`:
-   ```json
-   {
-     "instructions": [
-       "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws-wtf/SKILL.md"
-     ]
-   }
-   ```
-   
-   > Note: When using `npx add-skill`, it automatically adds the skill to your Claude/OpenCode opsy config.
+**Add the skill:**
 
-3. **Run opsy:**
-   ```bash
-   opsy
-   ```
+```bash
+npx add-skill opsyhq/opsy --skill aws-wtf
+```
 
-4. **Connect and select AWS:**
-   ```
-   > /connect    # Connect with existing Claude/OpenAI subscription
-   > /aws        # Choose your AWS account
-   ```
+> **Note:** When prompted, choose to install under `claude/opencode` or `all agents`. Opsy will automatically pick it up.
 
-5. **Ask about your bill:**
-   ```
-   > wtf is my aws bill
-   ```
+Or manually add to `~/.opsy/opsy.jsonc`:
 
-Opsy will automatically:
-- Query Cost Explorer (detects credits)
-- Enumerate all resources across all regions
-- Generate CSV report: `aws-wtf-{account-id}-{date}.csv`
-- Show summary breakdown
+```json
+{
+  "instructions": [
+    "https://raw.githubusercontent.com/opsyhq/opsy-cli/main/skills/aws-wtf/SKILL.md"
+  ]
+}
+```
 
-## Output
+## Usage
 
-**CSV Report** - Every charge with resource ARN, cost breakdown, and status (Billed/Free-Tier/Credit-Offset)
+```bash
+opsy
+> /connect    # Connect with Claude/OpenAI
+> /aws        # Select AWS account
+> wtf is my aws bill
+```
 
-**Summary** - Actual usage vs credits, top charges, warnings
-
+Opsy automatically generates `aws-wtf-{account-id}-{date}.csv` with full charge breakdown.
