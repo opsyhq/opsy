@@ -50,6 +50,12 @@ Configure in `~/.opsy/opsy.jsonc`:
 }
 ```
 
+## Security
+
+| Feature | Description |
+|---------|-------------|
+| [Secret Redaction](./secrets.md) | Auto-detects and redacts API keys, tokens, passwords |
+
 ## More Documentation
 
 For comprehensive documentation on configuration, agents, MCP servers, and more, see the [OpenCode docs](https://opencode.ai/docs/).
