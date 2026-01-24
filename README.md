@@ -44,7 +44,7 @@ why can't i reach my load balancer?
 - **Danger Classification** - Color-coded commands (read, update, delete, destroy)
 - **Live Streaming** - Real-time output, no truncation
 - **Audit Logging** - Full trail of every operation
-- **Secret Redaction** - Auto-detects and redacts API keys, tokens, passwords
+- **[Secret Redaction](./docs/secrets.md)** - Auto-detects and redacts API keys, tokens, passwords
 - **Run Recording** - Shareable recordings for review
 
 ## Documentation
