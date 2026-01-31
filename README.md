@@ -82,8 +82,8 @@ Skills teach opsy best practices for each tool. Add to `~/.opsy/opsy.jsonc`:
 
 **Or use npx to add skills:**
 ```bash
-npx add-skill opsyhq/opsy --skill aws-wtf    # AWS bill breakdown
-npx add-skill opsyhq/opsy --skill aws-finops # Cost optimization
+npx add-skill opsyhq/opsy-cli --skill aws-wtf    # AWS bill breakdown
+npx add-skill opsyhq/opsy-cli --skill aws-finops # Cost optimization
 ```
 
 See [skills/](./skills/) for all available skills.

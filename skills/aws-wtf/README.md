@@ -13,7 +13,7 @@ Automatically generates a CSV report with every charge linked to a specific reso
 **Add the skill:**
 
 ```bash
-npx add-skill opsyhq/opsy --skill aws-wtf
+npx add-skill opsyhq/opsy-cli --skill aws-wtf
 ```
 
 > **Note:** When prompted, choose to install under `claude/opencode` or `all agents`. Opsy will automatically pick it up.

@@ -14,8 +14,8 @@ Pre-built instruction sets that extend opsy with specialized capabilities. Each 
 Install skills using the add-skill CLI:
 
 ```bash
-npx add-skill opsyhq/opsy --skill aws-wtf
-npx add-skill opsyhq/opsy --skill aws-finops
+npx add-skill opsyhq/opsy-cli --skill aws-wtf
+npx add-skill opsyhq/opsy-cli --skill aws-finops
 ```
 
 Or manually add to your opsy config (`~/.opsy/opsy.jsonc` or `.opsy/opsy.jsonc`):

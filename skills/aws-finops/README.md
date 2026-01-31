@@ -13,7 +13,7 @@ Identifies idle/underutilized resources, rightsizing candidates, unattached volu
 **Add the skill:**
 
 ```bash
-npx add-skill opsyhq/opsy --skill aws-finops
+npx add-skill opsyhq/opsy-cli --skill aws-finops
 ```
 
 > **Note:** When prompted, choose to install under `claude/opencode` or `all agents`. Opsy will automatically pick it up.
