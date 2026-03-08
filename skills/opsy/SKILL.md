@@ -1,37 +1,26 @@
 ---
 name: opsy
-description: Use when working with Opsy through MCP or the opsy CLI to inspect current workspace state, manage drafts and revisions, review runs, or update org data. Prefer MCP for interactive agent workflows and use the CLI as a fallback when MCP is unavailable or shell execution is simpler.
+description: Use when working with Opsy to manage infrastructure — inspecting stacks, editing drafts, applying runs, or managing org variables. Prefer MCP when available, fall back to CLI otherwise.
 ---
 
 # Opsy
 
-## When to use this skill
+## When to use
 
-Use this skill when the task is about Opsy workspaces, drafts, revisions, runs, or org-level notes and variables.
+Use this skill for tasks involving Opsy workspaces, stacks, drafts, revisions, runs, or org variables.
 
-Start by inspecting current state. Do not assume prior repo state, prior run state, or previously created drafts.
+## MCP vs CLI
 
-## Surface choice
+- **MCP** — preferred for interactive workflows (inspect, edit, validate, apply in one session)
+- **CLI** — use when MCP is unavailable or for one-shot commands and scripts
 
-- Prefer MCP when an Opsy MCP server is already configured or the task needs iterative inspection, edits, validation, and follow-up actions in one session.
-- Use the CLI when MCP is unavailable, when shell execution is easier, or when the task is a one-shot command or script.
+## Workflow
 
-## Default workflow
+1. Inspect current state before making changes (don't assume anything)
+2. Use drafts for changes — write or edit, then validate
+3. Apply and check run status — handle approval waits explicitly
+4. Don't retry failed runs blindly — inspect first
 
-1. Inspect auth and current state first.
-2. Prefer draft-based changes over direct destructive actions.
-3. Validate drafts before apply when the change is non-trivial.
-4. Check run status after apply or import, and handle approval explicitly if the run is waiting.
+## CLI reference
 
-## Constraints
-
-- Do not document or invoke CLI commands that are not shipped yet.
-- Treat validation warnings, failed runs, and approval waits as explicit decision points.
-- Keep auth guidance limited to current PAT-based CLI behavior and currently configured MCP flows.
-
-## References
-
-- Workflow guidance: `references/workflows.md`
-- Current CLI command surface: `references/commands.md`
-- Auth guidance: `references/auth.md`
-- Troubleshooting: `references/troubleshooting.md`
+See `references/commands.md` for the full command surface.

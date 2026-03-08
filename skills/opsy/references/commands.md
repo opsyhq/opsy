@@ -1,56 +1,60 @@
-# Commands
+# CLI Commands
 
-This skill should only refer to the currently shipped CLI surface.
+## Auth
 
-## Shipped command groups
-
-```text
-opsy auth login
-opsy auth logout
+```
+opsy auth login --token <pat> [--api-url <url>]
 opsy auth whoami
+opsy auth logout
+```
 
+Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`
+
+## Workspaces
+
+```
 opsy workspace list
+```
 
-opsy draft list
-opsy draft get
-opsy draft create
-opsy draft write
-opsy draft edit
-opsy draft validate
-opsy draft delete
+## Drafts
 
-opsy revision list
-opsy revision get
-opsy revision delete
+```
+opsy draft list    --workspace <slug> --stack <slug>
+opsy draft get     <draft-short-id>
+opsy draft create  --workspace <slug> --stack <slug> [--name <name>]
+opsy draft write   [draft-short-id] [--workspace <slug> --stack <slug>] [--yaml <yaml> | --file <path> | stdin]
+opsy draft edit    [draft-short-id] [--workspace <slug> --stack <slug>] --old-string <text> --new-string <text>
+opsy draft validate <draft-short-id>
+opsy draft delete  <draft-short-id>
+```
 
-opsy run apply
-opsy run wait
-opsy run get
-opsy run list
-opsy run import
-opsy run cancel
+## Revisions
 
+```
+opsy revision list   --workspace <slug> --stack <slug>
+opsy revision get    [revision-number] --workspace <slug> --stack <slug>
+opsy revision delete <revision-number> --workspace <slug> --stack <slug>
+```
+
+## Runs
+
+```
+opsy run apply   --workspace <slug> --stack <slug> --env <slug> [--draft <short-id> | --revision <n>] [--preview-only] [--reason <text>]
+opsy run wait    <run-id|short-id> [--timeout-seconds <n>]
+opsy run get     <run-id|short-id>
+opsy run list    --workspace <slug> [--stack <slug>] [--status <status>] [--exclude-status <status>]
+opsy run import  --workspace <slug> --stack <slug> [--env <slug>] [--targets <json> | --file <path> | stdin] [--reason <text>]
+opsy run cancel  <run-id|short-id> [--force]
+```
+
+## Org
+
+```
 opsy org list
-opsy org set
-opsy org delete
+opsy org set       <key> [--value <text> | --file <path> | stdin] [--sensitive]
+opsy org delete    <key>
 opsy org get-notes
-opsy org set-notes
+opsy org set-notes [--notes <text> | --file <path> | stdin | --clear]
 ```
 
-## Usage rule
-
-Do not invent flags or unshipped commands in skill guidance. When exact arguments matter, use local help:
-
-```bash
-opsy <group> <command> --help
-```
-
-## Install path
-
-The intended public repo layout keeps the skill in:
-
-```text
-skills/opsy
-```
-
-Install from the GitHub repo or repo subfolder path supported by the client or skill installer you are using.
+All commands support `--json` and `--quiet` flags.
