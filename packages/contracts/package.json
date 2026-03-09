@@ -1,7 +1,6 @@
 {
   "name": "@opsy/contracts",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "exports": {
     ".": {
@@ -21,6 +20,7 @@
     "yaml": "^2.8.2",
     "zod": "^4.1.5"
   },
+  "private": true,
   "devDependencies": {
     "@types/node": "^25.3.0"
   }

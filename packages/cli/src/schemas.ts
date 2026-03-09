@@ -3,6 +3,7 @@ import {
   ApprovalStatusEnum,
   DraftMutationResponseSchema,
   DraftValidateResponseSchema,
+  EnvSchema,
   ErrorResponseSchema,
   OrgNotesSchema,
   OrgVariableSchema,
@@ -12,6 +13,7 @@ import {
   RunWaitResponseSchema,
   StackApplyResponseSchema,
   StackImportResponseSchema,
+  StackSchema,
   WorkspaceSchema,
 } from "@opsy/contracts";
 
@@ -199,6 +201,123 @@ export type OrgVariableItem = z.infer<typeof OrgVariableSchema>;
 
 export const OrgNotesResponseSchema = OrgNotesSchema;
 export type OrgNotesResponse = z.infer<typeof OrgNotesResponseSchema>;
+
+// --- Workspace ---
+
+export const WorkspaceDetailSchema = WorkspaceSchema;
+export type WorkspaceDetail = z.infer<typeof WorkspaceDetailSchema>;
+
+export const WorkspaceCreateResponseSchema = WorkspaceSchema;
+export type WorkspaceCreateResponse = z.infer<typeof WorkspaceCreateResponseSchema>;
+
+// --- Stacks ---
+
+const StackDeploymentSchema = z.object({
+  envSlug: z.string().min(1),
+  currentRevisionId: z.string().nullable(),
+  currentRevisionNumber: z.number().int().positive().nullable(),
+  lastAppliedAt: z.string().nullable(),
+  activeRunStatus: RunStatusEnum.nullable(),
+});
+
+export const StackListItemSchema = StackSchema.extend({
+  headRevisionNumber: z.number().int().positive().nullable(),
+  draftCount: z.number().int().nonnegative(),
+  deployments: z.array(StackDeploymentSchema),
+});
+export const StackListResponseSchema = z.array(StackListItemSchema);
+export type StackListItem = z.infer<typeof StackListItemSchema>;
+
+export const StackCreateResponseSchema = StackSchema;
+export type StackCreateResponse = z.infer<typeof StackCreateResponseSchema>;
+
+export const StackDetailSchema = StackSchema.extend({
+  headRevision: z.object({
+    id: z.string().min(1),
+    revisionNumber: z.number().int().positive(),
+    spec: z.string(),
+    specHash: z.string().min(1),
+  }).nullable(),
+  draftCount: z.number().int().nonnegative(),
+  deployments: z.array(StackDeploymentSchema.extend({
+    lastRunId: z.string().nullable().optional(),
+  })),
+});
+export type StackDetail = z.infer<typeof StackDetailSchema>;
+
+// --- Stack state ---
+
+const StackStateResourceSchema = z.object({
+  urn: z.string(),
+  name: z.string(),
+  type: z.string(),
+  inputs: z.record(z.string(), z.unknown()),
+  outputs: z.record(z.string(), z.unknown()),
+  deps: z.array(z.string()),
+  created: z.string().nullable(),
+  modified: z.string().nullable(),
+});
+
+export const StackStateEnvSchema = z.object({
+  envSlug: z.string().min(1),
+  updatedAt: z.string(),
+  runId: z.string(),
+  currentRevisionId: z.string().nullable(),
+  currentRevisionNumber: z.number().int().positive().nullable(),
+  resources: z.array(StackStateResourceSchema),
+});
+export const StackStateResponseSchema = z.array(StackStateEnvSchema);
+export type StackStateEnv = z.infer<typeof StackStateEnvSchema>;
+
+// --- Environments ---
+
+export const EnvListItemSchema = EnvSchema.extend({
+  bindings: z.array(z.object({
+    providerPkg: z.string().min(1),
+    profileName: z.string().nullable(),
+  })),
+  variableCount: z.number().int().nonnegative(),
+  secretCount: z.number().int().nonnegative(),
+});
+export const EnvListResponseSchema = z.array(EnvListItemSchema);
+export type EnvListItem = z.infer<typeof EnvListItemSchema>;
+
+export const EnvCreateResponseSchema = EnvSchema;
+export type EnvCreateResponse = z.infer<typeof EnvCreateResponseSchema>;
+
+export const EnvConfigResponseSchema = z.object({
+  bindings: z.array(z.object({
+    binding: z.object({
+      id: z.string().min(1),
+      envId: z.string().min(1),
+      workspaceId: z.string().min(1),
+      providerPkg: z.string().min(1),
+      globalProviderProfileId: z.string().min(1),
+      config: z.record(z.string(), z.unknown()).optional(),
+      createdAt: z.string().min(1),
+      updatedAt: z.string().min(1),
+    }),
+    profile: z.object({
+      id: z.string().min(1),
+      ownerWorkosOrgId: z.string().min(1),
+      providerPkg: z.string().min(1),
+      profileName: z.string().min(1),
+      config: z.record(z.string(), z.unknown()),
+      createdAt: z.string().min(1),
+      updatedAt: z.string().min(1),
+    }).nullable(),
+  })),
+  variables: z.array(z.object({
+    id: z.string().min(1),
+    envId: z.string().min(1),
+    key: z.string().min(1),
+    value: z.string().optional(),
+    sensitive: z.boolean(),
+    createdAt: z.string().min(1),
+    updatedAt: z.string().min(1),
+  })),
+});
+export type EnvConfigResponse = z.infer<typeof EnvConfigResponseSchema>;
 
 export {
   DraftMutationResponseSchema,

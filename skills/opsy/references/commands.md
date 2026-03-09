@@ -14,6 +14,30 @@ Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`
 
 ```
 opsy workspace list
+opsy workspace get    <slug>
+opsy workspace create --slug <slug> --name <name>
+opsy workspace delete <slug>
+```
+
+## Stacks
+
+```
+opsy stack list       --workspace <slug>
+opsy stack get        <slug> --workspace <slug>
+opsy stack create     --workspace <slug> --slug <slug> [--yaml <yaml>]
+opsy stack set-notes  --workspace <slug> --stack <slug> [--notes <text> | --file <path> | stdin | --clear]
+opsy stack delete     <slug> --workspace <slug>
+opsy stack state      <slug> --workspace <slug>
+```
+
+## Environments
+
+```
+opsy env list         --workspace <slug>
+opsy env create       --workspace <slug> --slug <slug>
+opsy env delete       --workspace <slug> --env <slug>
+opsy env config-get   --workspace <slug> --env <slug>
+opsy env config-set   --workspace <slug> --env <slug> [--config <json> | --file <path> | stdin]
 ```
 
 ## Drafts

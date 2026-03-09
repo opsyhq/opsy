@@ -11,11 +11,14 @@ import {
 import { createApiClient, type ApiClient } from "./client.js";
 import { ApiError, CliError, EXIT_CODE, UsageError, toErrorPayload } from "./errors.js";
 import {
+  formatAuthLogin,
   formatDraftCreate,
   formatDraftDetail,
   formatDraftList,
   formatDraftMutation,
   formatDraftValidate,
+  formatEnvConfig,
+  formatEnvList,
   formatOrgList,
   formatOrgNotes,
   formatOrgVariable,
@@ -27,7 +30,11 @@ import {
   formatRunImport,
   formatRunList,
   formatRunWait,
+  formatStackDetail,
+  formatStackList,
+  formatStackState,
   formatWhoAmI,
+  formatWorkspaceDetail,
   formatWorkspaceList,
   stringifyJson,
 } from "./output.js";
@@ -81,7 +88,7 @@ export async function runCli(argv: string[], options: RunCliOptions = {}): Promi
     }
 
     const [group, command, ...rest] = argv;
-    if (group === "--help" || group === "help") {
+    if (group === "--help" || group === "-h" || group === "help") {
       write(context.stdout, `${getHelpText()}\n`);
       return EXIT_CODE.OK;
     }
@@ -95,6 +102,34 @@ export async function runCli(argv: string[], options: RunCliOptions = {}): Promi
         return await handleAuthLogout(rest, context);
       case "workspace:list":
         return await handleWorkspaceList(rest, context);
+      case "workspace:get":
+        return await handleWorkspaceGet(rest, context);
+      case "workspace:create":
+        return await handleWorkspaceCreate(rest, context);
+      case "workspace:delete":
+        return await handleWorkspaceDelete(rest, context);
+      case "stack:list":
+        return await handleStackList(rest, context);
+      case "stack:get":
+        return await handleStackGet(rest, context);
+      case "stack:create":
+        return await handleStackCreate(rest, context);
+      case "stack:set-notes":
+        return await handleStackSetNotes(rest, context);
+      case "stack:delete":
+        return await handleStackDelete(rest, context);
+      case "stack:state":
+        return await handleStackState(rest, context);
+      case "env:list":
+        return await handleEnvList(rest, context);
+      case "env:create":
+        return await handleEnvCreate(rest, context);
+      case "env:delete":
+        return await handleEnvDelete(rest, context);
+      case "env:config-get":
+        return await handleEnvConfigGet(rest, context);
+      case "env:config-set":
+        return await handleEnvConfigSet(rest, context);
       case "draft:list":
         return await handleDraftList(rest, context);
       case "draft:get":
@@ -208,7 +243,7 @@ async function handleAuthLogin(argv: string[], context: CommandContext): Promise
 
   write(
     context.stdout,
-    `${formatWhoAmI(whoami)} savedToken=local-file:${context.store.getPath()}\n`,
+    `${formatAuthLogin(whoami, context.store.getPath())}\n`,
   );
   return EXIT_CODE.OK;
 }
@@ -260,6 +295,249 @@ async function handleWorkspaceList(argv: string[], context: CommandContext): Pro
   const items = await client.listWorkspaces();
 
   return writeSuccess(context.stdout, parsed, items, formatWorkspaceList(items));
+}
+
+async function handleWorkspaceGet(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("workspace get")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requirePositional(parsed, "workspace get", "workspace slug");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.getWorkspace(workspace);
+
+  return writeSuccess(context.stdout, parsed, data, formatWorkspaceDetail(data));
+}
+
+async function handleWorkspaceCreate(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("workspace create")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "workspace create");
+  const slug = requireFlag(parsed, "slug", "workspace create");
+  const name = requireFlag(parsed, "name", "workspace create");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.createWorkspace({ slug, name });
+
+  return writeSuccess(context.stdout, parsed, data, `Workspace created (${data.slug})`, data.slug);
+}
+
+async function handleWorkspaceDelete(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("workspace delete")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requirePositional(parsed, "workspace delete", "workspace slug");
+  const client = await createAuthedClient(parsed, context);
+  await client.deleteWorkspace(workspace);
+
+  return writeSuccess(context.stdout, parsed, { ok: true, slug: workspace }, `Deleted workspace ${workspace}`, workspace);
+}
+
+async function handleStackList(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack list")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "stack list");
+  const workspace = requireFlag(parsed, "workspace", "stack list");
+  const client = await createAuthedClient(parsed, context);
+  const items = await client.listStacks(workspace);
+
+  return writeSuccess(context.stdout, parsed, items, formatStackList(items));
+}
+
+async function handleStackGet(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack get")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requireFlag(parsed, "workspace", "stack get");
+  const stack = requirePositional(parsed, "stack get", "stack slug");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.getStack(workspace, stack);
+
+  return writeSuccess(context.stdout, parsed, data, formatStackDetail(data));
+}
+
+async function handleStackCreate(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack create")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "stack create");
+  const workspace = requireFlag(parsed, "workspace", "stack create");
+  const slug = requireFlag(parsed, "slug", "stack create");
+  const yaml = getStringFlag(parsed, "yaml");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.createStack(workspace, { slug, ...(yaml ? { yaml } : {}) });
+
+  return writeSuccess(context.stdout, parsed, data, `Stack created (${data.slug})`, data.slug);
+}
+
+async function handleStackSetNotes(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack set-notes")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requireFlag(parsed, "workspace", "stack set-notes");
+  const stack = requireFlag(parsed, "stack", "stack set-notes");
+  const shouldClear = getBooleanFlag(parsed, "clear");
+
+  const client = await createAuthedClient(parsed, context);
+
+  if (shouldClear) {
+    const data = await client.setStackNotes(workspace, stack, null);
+    return writeSuccess(context.stdout, parsed, data, `Stack notes cleared (${stack})`, stack);
+  }
+
+  const notes = await resolveTextInput(parsed, context, {
+    valueFlag: "notes",
+    fileFlag: "file",
+    description: "stack notes",
+    allowEmpty: false,
+  });
+  const data = await client.setStackNotes(workspace, stack, notes);
+  return writeSuccess(context.stdout, parsed, data, `Stack notes updated (${stack})`, stack);
+}
+
+async function handleStackDelete(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack delete")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requireFlag(parsed, "workspace", "stack delete");
+  const stack = requirePositional(parsed, "stack delete", "stack slug");
+  const client = await createAuthedClient(parsed, context);
+  await client.deleteStack(workspace, stack);
+
+  return writeSuccess(context.stdout, parsed, { ok: true, slug: stack }, `Deleted stack ${stack}`, stack);
+}
+
+async function handleStackState(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("stack state")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  const workspace = requireFlag(parsed, "workspace", "stack state");
+  const stack = requirePositional(parsed, "stack state", "stack slug");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.getStackState(workspace, stack);
+
+  return writeSuccess(context.stdout, parsed, data, formatStackState(data));
+}
+
+async function handleEnvList(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("env list")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "env list");
+  const workspace = requireFlag(parsed, "workspace", "env list");
+  const client = await createAuthedClient(parsed, context);
+  const items = await client.listEnvs(workspace);
+
+  return writeSuccess(context.stdout, parsed, items, formatEnvList(items));
+}
+
+async function handleEnvCreate(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("env create")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "env create");
+  const workspace = requireFlag(parsed, "workspace", "env create");
+  const slug = requireFlag(parsed, "slug", "env create");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.createEnv(workspace, slug);
+
+  return writeSuccess(context.stdout, parsed, data, `Environment created (${data.slug})`, data.slug);
+}
+
+async function handleEnvDelete(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("env delete")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "env delete");
+  const workspace = requireFlag(parsed, "workspace", "env delete");
+  const env = requireFlag(parsed, "env", "env delete");
+  const client = await createAuthedClient(parsed, context);
+  await client.deleteEnv(workspace, env);
+
+  return writeSuccess(context.stdout, parsed, { ok: true, slug: env }, `Deleted environment ${env}`, env);
+}
+
+async function handleEnvConfigGet(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("env config-get")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "env config-get");
+  const workspace = requireFlag(parsed, "workspace", "env config-get");
+  const env = requireFlag(parsed, "env", "env config-get");
+  const client = await createAuthedClient(parsed, context);
+  const data = await client.getEnvConfig(workspace, env);
+
+  return writeSuccess(context.stdout, parsed, data, formatEnvConfig(data));
+}
+
+async function handleEnvConfigSet(argv: string[], context: CommandContext): Promise<number> {
+  const parsed = parseArgs(argv);
+  if (getBooleanFlag(parsed, "help")) {
+    write(context.stdout, `${getHelpText("env config-set")}\n`);
+    return EXIT_CODE.OK;
+  }
+
+  ensureNoPositionals(parsed.positionals, "env config-set");
+  const workspace = requireFlag(parsed, "workspace", "env config-set");
+  const env = requireFlag(parsed, "env", "env config-set");
+
+  const configJson = await resolveTextInput(parsed, context, {
+    valueFlag: "config",
+    fileFlag: "file",
+    description: "env config JSON",
+    allowEmpty: false,
+  });
+
+  let config: unknown;
+  try {
+    config = JSON.parse(configJson);
+  } catch {
+    throw new UsageError("env config-set requires valid JSON.");
+  }
+
+  const client = await createAuthedClient(parsed, context);
+  await client.setEnvConfig(workspace, env, config as Parameters<typeof client.setEnvConfig>[2]);
+
+  return writeSuccess(context.stdout, parsed, { ok: true }, `Environment config updated (${env})`, env);
 }
 
 async function handleDraftList(argv: string[], context: CommandContext): Promise<number> {
@@ -405,7 +683,7 @@ async function handleDraftDelete(argv: string[], context: CommandContext): Promi
     context.stdout,
     parsed,
     { ok: true, shortId: draftShortId },
-    `shortId\t${draftShortId}\ndeleted\ttrue`,
+    `Deleted draft ${draftShortId}`,
     draftShortId,
   );
 }
@@ -466,7 +744,7 @@ async function handleRevisionDelete(argv: string[], context: CommandContext): Pr
     context.stdout,
     parsed,
     { ok: true, revisionId: revision.id, revisionNumber },
-    `revision\t${revisionNumber}\nrevisionId\t${revision.id}\ndeleted\ttrue`,
+    `Deleted revision ${revisionNumber}`,
     revision.id,
   );
 }
@@ -651,7 +929,7 @@ async function handleOrgDelete(argv: string[], context: CommandContext): Promise
     context.stdout,
     parsed,
     { ok: true, key },
-    `key\t${key}\ndeleted\ttrue`,
+    `Deleted variable ${key}`,
     key,
   );
 }
@@ -694,7 +972,7 @@ async function handleOrgSetNotes(argv: string[], context: CommandContext): Promi
 
   if (shouldClear) {
     await clearOrgNotesIfPresent(client);
-    return writeSuccess(context.stdout, parsed, { ok: true, cleared: true }, "cleared\ttrue", "cleared");
+    return writeSuccess(context.stdout, parsed, { ok: true, cleared: true }, "Org notes cleared.", "cleared");
   }
 
   const notes = await resolveOptionalTextInput(parsed, context, {
@@ -710,7 +988,7 @@ async function handleOrgSetNotes(argv: string[], context: CommandContext): Promi
 
   if (notes.length === 0) {
     await clearOrgNotesIfPresent(client);
-    return writeSuccess(context.stdout, parsed, { ok: true, cleared: true }, "cleared\ttrue", "cleared");
+    return writeSuccess(context.stdout, parsed, { ok: true, cleared: true }, "Org notes cleared.", "cleared");
   }
 
   const saved = await client.setOrgNotes(notes);
@@ -991,7 +1269,35 @@ export function getHelpText(command?: string): string {
     case "auth logout":
       return "Usage: opsy auth logout [--json]";
     case "workspace list":
-      return "Usage: opsy workspace list [--token <pat>] [--api-url <url>] [--json]";
+      return "Usage: opsy workspace list [--json]";
+    case "workspace get":
+      return "Usage: opsy workspace get <slug> [--json]";
+    case "workspace create":
+      return "Usage: opsy workspace create --slug <slug> --name <name> [--quiet] [--json]";
+    case "workspace delete":
+      return "Usage: opsy workspace delete <slug> [--quiet] [--json]";
+    case "stack list":
+      return "Usage: opsy stack list --workspace <slug> [--json]";
+    case "stack get":
+      return "Usage: opsy stack get <slug> --workspace <slug> [--json]";
+    case "stack create":
+      return "Usage: opsy stack create --workspace <slug> --slug <slug> [--yaml <yaml>] [--quiet] [--json]";
+    case "stack set-notes":
+      return "Usage: opsy stack set-notes --workspace <slug> --stack <slug> [--notes <text> | --file <path> | stdin | --clear] [--quiet] [--json]";
+    case "stack delete":
+      return "Usage: opsy stack delete <slug> --workspace <slug> [--quiet] [--json]";
+    case "stack state":
+      return "Usage: opsy stack state <slug> --workspace <slug> [--json]";
+    case "env list":
+      return "Usage: opsy env list --workspace <slug> [--json]";
+    case "env create":
+      return "Usage: opsy env create --workspace <slug> --slug <slug> [--quiet] [--json]";
+    case "env delete":
+      return "Usage: opsy env delete --workspace <slug> --env <slug> [--quiet] [--json]";
+    case "env config-get":
+      return "Usage: opsy env config-get --workspace <slug> --env <slug> [--json]";
+    case "env config-set":
+      return "Usage: opsy env config-set --workspace <slug> --env <slug> [--config <json> | --file <path> | stdin] [--quiet] [--json]";
     case "draft list":
       return "Usage: opsy draft list --workspace <slug> --stack <slug> [--json]";
     case "draft get":
@@ -1036,15 +1342,70 @@ export function getHelpText(command?: string): string {
       return "Usage: opsy org set-notes [--notes <text> | --file <path> | stdin | --clear] [--quiet] [--json]";
     default:
       return [
-        "Usage:",
-        "  opsy auth login --token <pat> [--api-url <url>] [--json]",
-        "  opsy auth whoami [--token <pat>] [--api-url <url>] [--json]",
-        "  opsy auth logout [--json]",
-        "  opsy workspace list [--json]",
-        "  opsy draft list|get|create|write|edit|validate|delete ...",
-        "  opsy revision list|get|delete ...",
-        "  opsy run get|list|apply|wait|import|cancel ...",
-        "  opsy org list|set|delete|get-notes|set-notes ...",
+        "opsy — infrastructure management CLI",
+        "",
+        "USAGE",
+        "  opsy <command> <subcommand> [flags]",
+        "",
+        "AUTH",
+        "  auth login         Authenticate with a personal access token",
+        "  auth whoami        Show the authenticated user",
+        "  auth logout        Remove stored credentials",
+        "",
+        "WORKSPACES",
+        "  workspace list     List all workspaces",
+        "  workspace get      Show workspace details",
+        "  workspace create   Create a new workspace",
+        "  workspace delete   Delete a workspace",
+        "",
+        "STACKS",
+        "  stack list         List stacks in a workspace",
+        "  stack get          Show stack details and deployments",
+        "  stack create       Create a new stack",
+        "  stack set-notes    Set or clear stack notes",
+        "  stack delete       Delete a stack",
+        "  stack state        Show deployed stack state",
+        "",
+        "ENVIRONMENTS",
+        "  env list           List environments in a workspace",
+        "  env create         Create a new environment",
+        "  env delete         Delete an environment",
+        "  env config-get     Show environment config",
+        "  env config-set     Set environment config",
+        "",
+        "DRAFTS",
+        "  draft list         List drafts for a stack",
+        "  draft get          Show draft details and spec",
+        "  draft create       Create a new draft",
+        "  draft write        Write YAML spec to a draft",
+        "  draft edit         Edit a draft with string replacement",
+        "  draft validate     Validate a draft",
+        "  draft delete       Delete a draft",
+        "",
+        "REVISIONS",
+        "  revision list      List revisions for a stack",
+        "  revision get       Show revision details and spec",
+        "  revision delete    Delete a revision",
+        "",
+        "RUNS",
+        "  run get            Show run details",
+        "  run list           List runs for a workspace",
+        "  run apply          Queue an apply run",
+        "  run wait           Wait for a run to finish",
+        "  run import         Import existing resources",
+        "  run cancel         Cancel a run",
+        "",
+        "ORG",
+        "  org list           List org variables",
+        "  org set            Set an org variable",
+        "  org delete         Delete an org variable",
+        "  org get-notes      Show org notes",
+        "  org set-notes      Set or clear org notes",
+        "",
+        "FLAGS",
+        "  --json             Output as JSON",
+        "  --quiet            Minimal output (IDs only)",
+        "  --help, -h         Show help",
       ].join("\n");
   }
 }

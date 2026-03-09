@@ -7,7 +7,7 @@ description: Use when working with Opsy to manage infrastructure — inspecting 
 
 ## When to use
 
-Use this skill for tasks involving Opsy workspaces, stacks, drafts, revisions, runs, or org variables.
+Use this skill for tasks involving Opsy workspaces, stacks, environments, drafts, revisions, runs, or org variables.
 
 ## MCP vs CLI
 

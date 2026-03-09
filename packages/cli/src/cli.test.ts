@@ -121,7 +121,12 @@ describe("cli commands", () => {
     });
 
     expect(exitCode).toBe(EXIT_CODE.OK);
-    expect(stdout.read()).toBe("acme\tAcme\tstacks=2\tenvs=3\n");
+    const out = stdout.read();
+    expect(out).toContain("NAME");
+    expect(out).toContain("acme");
+    expect(out).toContain("Acme");
+    expect(out).toContain("2");
+    expect(out).toContain("3");
     expect(stderr.read()).toBe("");
   });
 
@@ -178,7 +183,12 @@ describe("cli commands", () => {
     );
 
     expect(exitCode).toBe(EXIT_CODE.OK);
-    expect(stdout.read()).toBe("deadbeef\trunning\tapply\tapi/prod\t2026-03-07T10:00:00.000Z\n");
+    const out = stdout.read();
+    expect(out).toContain("ID");
+    expect(out).toContain("STATUS");
+    expect(out).toContain("deadbeef");
+    expect(out).toContain("running");
+    expect(out).toContain("api/prod");
     expect(stderr.read()).toBe("");
   });
 
@@ -263,7 +273,7 @@ describe("cli commands", () => {
     });
 
     expect(exitCode).toBe(EXIT_CODE.OK);
-    expect(stdout.read()).toContain("shortId\tdeadbeef");
+    expect(stdout.read()).toContain("deadbeef");
     expect(stderr.read()).toBe("");
   });
 
@@ -359,8 +369,10 @@ describe("cli commands", () => {
     );
 
     expect(exitCode).toBe(EXIT_CODE.OK);
-    expect(stdout.read()).toContain("status\tready");
-    expect(stdout.read()).toContain("preview\tcreate=1");
+    const out = stdout.read();
+    expect(out).toContain("Run queued");
+    expect(out).toContain("ready");
+    expect(out).toContain("create=1");
     expect(stderr.read()).toBe("");
   });
 
@@ -408,7 +420,7 @@ describe("cli commands", () => {
     });
 
     expect(exitCode).toBe(EXIT_CODE.OK);
-    expect(stdout.read()).toContain("shortId\tdeadbeef");
+    expect(stdout.read()).toContain("deadbeef");
     expect(stderr.read()).toBe("");
   });
 

@@ -1,8 +1,11 @@
+import { detail, table } from "./format.js";
 import type {
   DraftDetail,
   DraftListResponse,
   DraftMutationResponse,
   DraftValidateResponse,
+  EnvConfigResponse,
+  EnvListItem,
   OrgNotesResponse,
   OrgVariableItem,
   RestRunSummary,
@@ -11,280 +14,384 @@ import type {
   RunCancelResponse,
   RunGetResponse,
   RunListResponse,
-  RunWaitResponse,
   StackApplyResponse,
+  StackDetail,
   StackImportResponse,
+  StackListItem,
+  StackStateEnv,
   WhoAmIResponse,
+  WorkspaceDetail,
   WorkspaceListItem,
 } from "./schemas.js";
 
 export function formatWhoAmI(data: WhoAmIResponse): string {
-  const parts = [
-    data.user.email,
-    `org=${data.actor.orgId}`,
-    `auth=${data.actor.authType}`,
+  const pairs: [string, string][] = [
+    ["Email", data.user.email],
+    ["Organization", data.actor.orgId],
+    ["Auth", data.actor.authType],
   ];
-
   if (data.actor.credentialLabel) {
-    parts.push(`credential=${data.actor.credentialLabel}`);
+    pairs.push(["Credential", data.actor.credentialLabel]);
   }
+  return detail(pairs);
+}
 
-  return parts.join(" ");
+export function formatAuthLogin(data: WhoAmIResponse, configPath: string): string {
+  const authValue = data.actor.credentialLabel
+    ? `${data.actor.authType} (${data.actor.credentialLabel})`
+    : data.actor.authType;
+  const pairs: [string, string][] = [
+    ["Organization", data.actor.orgId],
+    ["Auth", authValue],
+    ["Config", configPath],
+  ];
+  return `Authenticated as ${data.user.email}\n\n${detail(pairs)}`;
 }
 
 export function formatWorkspaceList(items: WorkspaceListItem[]): string {
   if (items.length === 0) {
     return "No workspaces found.";
   }
-
-  return items
-    .map((item) => [item.slug, item.name, `stacks=${item.stackCount ?? 0}`, `envs=${item.envCount ?? 0}`].join("\t"))
-    .join("\n");
+  return table(
+    ["Name", "Slug", "Stacks", "Envs"],
+    items.map((item) => [
+      item.name,
+      item.slug,
+      String(item.stackCount ?? 0),
+      String(item.envCount ?? 0),
+    ]),
+  );
 }
 
 export function formatRunList(data: RunListResponse): string {
   if (data.items.length === 0) {
     return "No runs found.";
   }
-
-  const lines = data.items.map((item) =>
-    [item.shortId, item.status, item.kind, `${item.stackSlug}/${item.envSlug}`, item.queuedAt].join("\t"),
+  const out = table(
+    ["ID", "Status", "Kind", "Stack/Env", "Queued"],
+    data.items.map((item) => [
+      item.shortId,
+      item.status,
+      item.kind,
+      `${item.stackSlug}/${item.envSlug}`,
+      item.queuedAt,
+    ]),
   );
-
   if (data.nextCursor) {
-    lines.push(`nextCursor\t${data.nextCursor}`);
+    return `${out}\nnextCursor: ${data.nextCursor}`;
   }
-
-  return lines.join("\n");
+  return out;
 }
 
 export function formatRunGet(data: RunGetResponse): string {
-  const lines = baseRunLines(data);
-
-  if (data.reason) {
-    lines.push(`reason\t${data.reason}`);
-  }
-  if (data.startedAt) {
-    lines.push(`startedAt\t${data.startedAt}`);
-  }
-  if (data.finishedAt) {
-    lines.push(`finishedAt\t${data.finishedAt}`);
-  }
-  if (data.revisionNumber !== null) {
-    lines.push(`revision\t${data.revisionNumber}`);
-  }
-  if (data.draftShortId) {
-    lines.push(`draft\t${data.draftShortId}`);
-  }
-  if (data.requestedBy?.email) {
-    lines.push(`requestedBy\t${data.requestedBy.email}`);
-  }
-  if (data.approval) {
-    lines.push(`approval\t${data.approval.status}`);
-  }
-  if (data.previewResult?.changeSummary) {
-    lines.push(`preview\t${formatChangeSummary(data.previewResult.changeSummary)}`);
-  }
-  if (data.applyResult?.changeSummary) {
-    lines.push(`apply\t${formatChangeSummary(data.applyResult.changeSummary)}`);
-  }
-  if (data.error) {
-    lines.push(`error\t${data.error}`);
-  }
-
-  return lines.join("\n");
+  const pairs: [string, string][] = [
+    ["ID", data.shortId],
+    ["Status", data.status],
+    ["Kind", data.kind],
+    ["Stack", data.stackSlug],
+    ["Env", data.envSlug],
+    ["Queued at", data.queuedAt],
+  ];
+  if (data.startedAt) pairs.push(["Started at", data.startedAt]);
+  if (data.finishedAt) pairs.push(["Finished at", data.finishedAt]);
+  if (data.reason) pairs.push(["Reason", data.reason]);
+  if (data.draftShortId) pairs.push(["Draft", data.draftShortId]);
+  if (data.revisionNumber !== null) pairs.push(["Revision", String(data.revisionNumber)]);
+  if (data.requestedBy?.email) pairs.push(["Requested by", data.requestedBy.email]);
+  if (data.approval) pairs.push(["Approval", data.approval.status]);
+  if (data.previewResult?.changeSummary) pairs.push(["Preview", formatChangeSummary(data.previewResult.changeSummary)]);
+  if (data.applyResult?.changeSummary) pairs.push(["Apply", formatChangeSummary(data.applyResult.changeSummary)]);
+  if (data.error) pairs.push(["Error", data.error]);
+  return detail(pairs);
 }
 
 export function formatDraftList(items: DraftListResponse): string {
   if (items.length === 0) {
     return "No drafts found.";
   }
-
-  return items
-    .map((item) => [
+  return table(
+    ["ID", "Name", "Stale", "Updated"],
+    items.map((item) => [
       item.shortId,
       item.name ?? "-",
-      `stale=${item.isStale ? "true" : "false"}`,
+      item.isStale ? "yes" : "no",
       item.updatedAt,
-    ].join("\t"))
-    .join("\n");
+    ]),
+  );
 }
 
 export function formatDraftDetail(data: DraftDetail): string {
-  const lines = [
-    `id\t${data.id}`,
-    `shortId\t${data.shortId}`,
-    `name\t${data.name ?? ""}`,
-    `specHash\t${data.specHash}`,
-    `stale\t${data.isStale ? "true" : "false"}`,
-    `createdAt\t${data.createdAt}`,
-    `updatedAt\t${data.updatedAt}`,
+  const pairs: [string, string][] = [
+    ["ID", data.shortId],
+    ["Name", data.name ?? "-"],
+    ["Stale", data.isStale ? "yes" : "no"],
+    ["Spec hash", data.specHash],
+    ["Created at", data.createdAt],
+    ["Updated at", data.updatedAt],
   ];
-
   if (data.baseRevision) {
-    lines.push(`baseRevision\t${data.baseRevision.revisionNumber}`);
+    pairs.push(["Base revision", String(data.baseRevision.revisionNumber)]);
   }
-
-  lines.push("spec");
-  lines.push(data.spec);
-  return lines.join("\n");
-}
-
-export function formatDraftMutation(data: DraftMutationResponse): string {
-  return [`draftId\t${data.draftId}`, `shortId\t${data.shortId}`]
-    .concat(data.warnings.map((warning) => `warning\t${warning}`))
-    .join("\n");
+  return `${detail(pairs)}\n\nspec\n${data.spec}`;
 }
 
 export function formatDraftCreate(data: { draftId: string; shortId: string }): string {
-  return [`draftId\t${data.draftId}`, `shortId\t${data.shortId}`].join("\n");
+  return `Draft created (${data.shortId})`;
+}
+
+export function formatDraftMutation(data: DraftMutationResponse): string {
+  const lines = [`Draft updated (${data.shortId})`];
+  for (const warning of data.warnings) {
+    lines.push(`  warning: ${warning}`);
+  }
+  return lines.join("\n");
 }
 
 export function formatDraftValidate(data: DraftValidateResponse): string {
-  return [`ok\t${data.ok ? "true" : "false"}`]
-    .concat(data.warnings.map((warning) => `warning\t${warning}`))
-    .join("\n");
+  const lines = [data.ok ? "Valid" : "Invalid"];
+  for (const warning of data.warnings) {
+    lines.push(`  warning: ${warning}`);
+  }
+  return lines.join("\n");
 }
 
 export function formatRevisionList(data: RevisionListResponse): string {
   if (data.items.length === 0) {
     return "No revisions found.";
   }
-
-  const lines = data.items.map((item) =>
-    [String(item.revisionNumber), item.runId ?? "-", item.createdAt].join("\t"),
+  const out = table(
+    ["Revision", "Run", "Created"],
+    data.items.map((item) => [
+      String(item.revisionNumber),
+      item.runId ?? "-",
+      item.createdAt,
+    ]),
   );
-
   if (data.nextCursor) {
-    lines.push(`nextCursor\t${data.nextCursor}`);
+    return `${out}\nnextCursor: ${data.nextCursor}`;
   }
-
-  return lines.join("\n");
+  return out;
 }
 
 export function formatRevisionDetail(data: RevisionDetail): string {
-  const lines = [
-    `id\t${data.id}`,
-    `revision\t${data.revisionNumber}`,
-    `specHash\t${data.specHash}`,
-    `runId\t${data.runId ?? ""}`,
-    `createdAt\t${data.createdAt}`,
+  const pairs: [string, string][] = [
+    ["Revision", String(data.revisionNumber)],
+    ["ID", data.id],
+    ["Spec hash", data.specHash],
+    ["Run ID", data.runId ?? "-"],
+    ["Created at", data.createdAt],
   ];
-
   if (data.baseRevision) {
-    lines.push(`baseRevision\t${data.baseRevision.revisionNumber}`);
+    pairs.push(["Base revision", String(data.baseRevision.revisionNumber)]);
   }
-
-  lines.push("spec");
-  lines.push(data.spec);
-  return lines.join("\n");
+  return `${detail(pairs)}\n\nspec\n${data.spec}`;
 }
 
 export function formatRestRun(data: RestRunSummary | RunCancelResponse): string {
-  const lines = [
-    `id\t${data.id}`,
-    `shortId\t${data.shortId}`,
-    `status\t${data.status}`,
-    `kind\t${data.kind}`,
+  const pairs: [string, string][] = [
+    ["ID", data.shortId],
+    ["Status", data.status],
+    ["Kind", data.kind],
   ];
-
-  if ("reason" in data && data.reason) {
-    lines.push(`reason\t${data.reason}`);
-  }
-  if (data.startedAt) {
-    lines.push(`startedAt\t${data.startedAt}`);
-  }
-  if (data.finishedAt) {
-    lines.push(`finishedAt\t${data.finishedAt}`);
-  }
-
-  return lines.join("\n");
+  if ("reason" in data && data.reason) pairs.push(["Reason", data.reason]);
+  if (data.startedAt) pairs.push(["Started at", data.startedAt]);
+  if (data.finishedAt) pairs.push(["Finished at", data.finishedAt]);
+  return detail(pairs);
 }
 
-export function formatRunWait(data: RunWaitResponse): string {
-  const lines = [`status\t${data.status}`, `runId\t${data.runId}`];
-
+export function formatRunWait(data: { status: string; runId: string; run?: { shortId: string; status: string; kind: string } | null }): string {
+  const pairs: [string, string][] = [
+    ["Status", data.status],
+    ["Run ID", data.runId],
+  ];
   if (data.run) {
-    lines.push(`shortId\t${data.run.shortId}`);
-    lines.push(`runStatus\t${data.run.status}`);
-    lines.push(`kind\t${data.run.kind}`);
+    pairs.push(["Short ID", data.run.shortId]);
+    pairs.push(["Run status", data.run.status]);
+    pairs.push(["Kind", data.run.kind]);
   }
-
-  return lines.join("\n");
+  return detail(pairs);
 }
 
 export function formatRunApply(data: StackApplyResponse): string {
-  const lines = [
-    `status\t${data.status}`,
-    `runId\t${data.runId}`,
-    `jobId\t${data.jobId}`,
-    `shortId\t${data.run.shortId}`,
-    `runStatus\t${data.run.status}`,
-    `kind\t${data.run.kind}`,
+  const pairs: [string, string][] = [
+    ["Status", data.status],
+    ["Run ID", data.runId],
+    ["Short ID", data.run.shortId],
+    ["Kind", data.run.kind],
   ];
-
   if (data.previewResult?.changeSummary) {
-    lines.push(`preview\t${formatChangeSummary(data.previewResult.changeSummary)}`);
+    pairs.push(["Preview", formatChangeSummary(data.previewResult.changeSummary)]);
   }
-
-  return lines.join("\n");
+  return `Run queued\n\n${detail(pairs)}`;
 }
 
 export function formatRunImport(data: StackImportResponse): string {
-  const lines = [
-    `status\t${data.status}`,
-    `runId\t${data.runId}`,
-    `jobId\t${data.jobId}`,
-    `shortId\t${data.run.shortId}`,
-    `runStatus\t${data.run.status}`,
-    `kind\t${data.run.kind}`,
-    `importedCount\t${data.importedCount}`,
+  const pairs: [string, string][] = [
+    ["Status", data.status],
+    ["Run ID", data.runId],
+    ["Short ID", data.run.shortId],
+    ["Kind", data.run.kind],
+    ["Imported", String(data.importedCount)],
   ];
-
-  return lines.join("\n");
+  return detail(pairs);
 }
 
 export function formatOrgList(items: OrgVariableItem[]): string {
   if (items.length === 0) {
     return "No org variables found.";
   }
-
-  return items
-    .map((item) => [
+  return table(
+    ["Key", "Sensitive", "Updated"],
+    items.map((item) => [
       item.key,
-      `sensitive=${item.sensitive ? "true" : "false"}`,
+      item.sensitive ? "yes" : "no",
       item.updatedAt,
-    ].join("\t"))
-    .join("\n");
+    ]),
+  );
 }
 
 export function formatOrgVariable(data: OrgVariableItem): string {
-  const lines = [`key\t${data.key}`, `sensitive\t${data.sensitive ? "true" : "false"}`];
+  const pairs: [string, string][] = [
+    ["Key", data.key],
+    ["Sensitive", data.sensitive ? "yes" : "no"],
+  ];
   if ("value" in data && typeof data.value === "string") {
-    lines.push(`value\t${data.value}`);
+    pairs.push(["Value", data.value]);
   }
-  lines.push(`updatedAt\t${data.updatedAt}`);
-  return lines.join("\n");
+  pairs.push(["Updated at", data.updatedAt]);
+  return detail(pairs);
 }
 
 export function formatOrgNotes(data: OrgNotesResponse): string {
-  return [`updatedAt\t${data.updatedAt}`, "content", data.content].join("\n");
+  return `Updated at: ${data.updatedAt}\n\n${data.content}`;
+}
+
+export function formatWorkspaceDetail(data: WorkspaceDetail): string {
+  const pairs: [string, string][] = [
+    ["Slug", data.slug],
+    ["Name", data.name],
+    ["Created at", data.createdAt],
+    ["Updated at", data.updatedAt],
+  ];
+  if (data.notes) pairs.push(["Notes", data.notes]);
+  return detail(pairs);
+}
+
+export function formatStackList(items: StackListItem[]): string {
+  if (items.length === 0) {
+    return "No stacks found.";
+  }
+  return table(
+    ["Slug", "Head Rev", "Drafts", "Deployments"],
+    items.map((item) => [
+      item.slug,
+      item.headRevisionNumber !== null ? String(item.headRevisionNumber) : "-",
+      String(item.draftCount),
+      item.deployments.map((d) => d.envSlug).join(",") || "-",
+    ]),
+  );
+}
+
+export function formatStackDetail(data: StackDetail): string {
+  const pairs: [string, string][] = [
+    ["Slug", data.slug],
+    ["Head revision", data.headRevision ? String(data.headRevision.revisionNumber) : "-"],
+    ["Drafts", String(data.draftCount)],
+    ["Created at", data.createdAt],
+    ["Updated at", data.updatedAt],
+  ];
+  if (data.notes) pairs.push(["Notes", data.notes]);
+
+  const lines = [detail(pairs)];
+
+  if (data.deployments.length > 0) {
+    lines.push("");
+    lines.push(table(
+      ["Env", "Revision", "Last applied", "Active run"],
+      data.deployments.map((d) => [
+        d.envSlug,
+        d.currentRevisionNumber !== null ? String(d.currentRevisionNumber) : "-",
+        d.lastAppliedAt ?? "-",
+        d.activeRunStatus ?? "-",
+      ]),
+    ));
+  }
+
+  return lines.join("\n");
+}
+
+export function formatStackState(envs: StackStateEnv[]): string {
+  if (envs.length === 0) {
+    return "No state found.";
+  }
+
+  const sections: string[] = [];
+  for (const env of envs) {
+    const header = `${env.envSlug}  (revision ${env.currentRevisionNumber ?? "-"}, run ${env.runId})`;
+    if (env.resources.length === 0) {
+      sections.push(`${header}\n  No resources.`);
+      continue;
+    }
+    const resourceTable = table(
+      ["Type", "Name", "URN"],
+      env.resources.map((r) => [r.type, r.name, r.urn]),
+    );
+    sections.push(`${header}\n${resourceTable}`);
+  }
+  return sections.join("\n\n");
+}
+
+export function formatEnvList(items: EnvListItem[]): string {
+  if (items.length === 0) {
+    return "No environments found.";
+  }
+  return table(
+    ["Slug", "Providers", "Vars", "Secrets"],
+    items.map((item) => [
+      item.slug,
+      item.bindings.map((b) => b.providerPkg).join(",") || "-",
+      String(item.variableCount),
+      String(item.secretCount),
+    ]),
+  );
+}
+
+export function formatEnvConfig(data: EnvConfigResponse): string {
+  const sections: string[] = [];
+
+  if (data.bindings.length > 0) {
+    sections.push("PROVIDERS");
+    sections.push(table(
+      ["Package", "Profile"],
+      data.bindings.map((b) => [
+        b.binding.providerPkg,
+        b.profile?.profileName ?? "-",
+      ]),
+    ));
+  }
+
+  if (data.variables.length > 0) {
+    if (sections.length > 0) sections.push("");
+    sections.push("VARIABLES");
+    sections.push(table(
+      ["Key", "Sensitive", "Updated"],
+      data.variables.map((v) => [
+        v.key,
+        v.sensitive ? "yes" : "no",
+        v.updatedAt,
+      ]),
+    ));
+  }
+
+  if (sections.length === 0) {
+    return "No config.";
+  }
+
+  return sections.join("\n");
 }
 
 export function stringifyJson(data: unknown): string {
   return `${JSON.stringify(data, null, 2)}\n`;
-}
-
-function baseRunLines(data: RunGetResponse): string[] {
-  return [
-    `id\t${data.id}`,
-    `shortId\t${data.shortId}`,
-    `status\t${data.status}`,
-    `kind\t${data.kind}`,
-    `stack\t${data.stackSlug}`,
-    `env\t${data.envSlug}`,
-    `queuedAt\t${data.queuedAt}`,
-  ];
 }
 
 function formatChangeSummary(summary: Record<string, number>): string {

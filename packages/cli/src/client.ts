@@ -6,7 +6,12 @@ import {
   DraftListResponseSchema,
   DraftMutationResponseSchema,
   DraftValidateResponseSchema,
+  EnvConfigResponseSchema,
+  EnvCreateResponseSchema,
+  EnvListResponseSchema,
   ErrorResponseSchema,
+  StackCreateResponseSchema,
+  WorkspaceCreateResponseSchema,
   OrgNotesResponseSchema,
   OrgVariableListResponseSchema,
   OrgVariableSchema,
@@ -17,14 +22,23 @@ import {
   RunListResponseSchema,
   RunWaitResponseSchema,
   StackApplyResponseSchema,
+  StackDetailSchema,
   StackImportResponseSchema,
+  StackListResponseSchema,
+  StackStateResponseSchema,
   WhoAmIResponseSchema,
+  WorkspaceDetailSchema,
   WorkspaceListResponseSchema,
   type DraftCreateResponse,
   type DraftDetail,
   type DraftListResponse,
   type DraftMutationResponse,
   type DraftValidateResponse,
+  type EnvConfigResponse,
+  type EnvCreateResponse,
+  type EnvListItem,
+  type StackCreateResponse,
+  type WorkspaceCreateResponse,
   type OrgNotesResponse,
   type OrgVariableItem,
   type RevisionDetail,
@@ -34,8 +48,12 @@ import {
   type RunListResponse,
   type RunWaitResponse,
   type StackApplyResponse,
+  type StackDetail,
   type StackImportResponse,
+  type StackListItem,
+  type StackStateEnv,
   type WhoAmIResponse,
+  type WorkspaceDetail,
   type WorkspaceListItem,
 } from "./schemas.js";
 
@@ -79,6 +97,110 @@ export class ApiClient {
 
   listWorkspaces(): Promise<WorkspaceListItem[]> {
     return this.request("GET", "/workspaces", WorkspaceListResponseSchema);
+  }
+
+  getWorkspace(workspace: string): Promise<WorkspaceDetail> {
+    return this.request("GET", `/workspaces/${encodeURIComponent(workspace)}`, WorkspaceDetailSchema);
+  }
+
+  createWorkspace(body: { slug: string; name: string; envs?: Array<{ slug: string }> }): Promise<WorkspaceCreateResponse> {
+    return this.request("POST", "/workspaces", WorkspaceCreateResponseSchema, body);
+  }
+
+  updateWorkspace(workspace: string, body: { name?: string; notes?: string | null }): Promise<WorkspaceDetail> {
+    return this.request("PATCH", `/workspaces/${encodeURIComponent(workspace)}`, WorkspaceDetailSchema, body);
+  }
+
+  deleteWorkspace(workspace: string): Promise<void> {
+    return this.requestNoContent("DELETE", `/workspaces/${encodeURIComponent(workspace)}`);
+  }
+
+  listStacks(workspace: string): Promise<StackListItem[]> {
+    return this.request("GET", `/workspaces/${encodeURIComponent(workspace)}/stacks`, StackListResponseSchema);
+  }
+
+  getStack(workspace: string, stack: string): Promise<StackDetail> {
+    return this.request(
+      "GET",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks/${encodeURIComponent(stack)}`,
+      StackDetailSchema,
+    );
+  }
+
+  createStack(workspace: string, body: { slug: string; yaml?: string }): Promise<StackCreateResponse> {
+    return this.request(
+      "POST",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks`,
+      StackCreateResponseSchema,
+      body,
+    );
+  }
+
+  setStackNotes(workspace: string, stack: string, notes: string | null): Promise<StackCreateResponse> {
+    return this.request(
+      "PATCH",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks/${encodeURIComponent(stack)}/notes`,
+      StackCreateResponseSchema,
+      { notes },
+    );
+  }
+
+  deleteStack(workspace: string, stack: string): Promise<void> {
+    return this.requestNoContent(
+      "DELETE",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks/${encodeURIComponent(stack)}`,
+    );
+  }
+
+  getStackState(workspace: string, stack: string): Promise<StackStateEnv[]> {
+    return this.request(
+      "GET",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks/${encodeURIComponent(stack)}/state`,
+      StackStateResponseSchema,
+    );
+  }
+
+  listEnvs(workspace: string): Promise<EnvListItem[]> {
+    return this.request("GET", `/workspaces/${encodeURIComponent(workspace)}/envs`, EnvListResponseSchema);
+  }
+
+  createEnv(workspace: string, slug: string): Promise<EnvCreateResponse> {
+    return this.request(
+      "POST",
+      `/workspaces/${encodeURIComponent(workspace)}/envs`,
+      EnvCreateResponseSchema,
+      { slug },
+    );
+  }
+
+  deleteEnv(workspace: string, env: string): Promise<void> {
+    return this.requestNoContent(
+      "DELETE",
+      `/workspaces/${encodeURIComponent(workspace)}/envs/${encodeURIComponent(env)}`,
+    );
+  }
+
+  getEnvConfig(workspace: string, env: string): Promise<EnvConfigResponse> {
+    return this.request(
+      "GET",
+      `/workspaces/${encodeURIComponent(workspace)}/envs/${encodeURIComponent(env)}/config`,
+      EnvConfigResponseSchema,
+    );
+  }
+
+  setEnvConfig(
+    workspace: string,
+    env: string,
+    body: {
+      providerProfileBindings?: Array<{ providerPkg: string; profileName: string; config?: Record<string, string> }>;
+      variables?: Array<{ key: string; value: string; sensitive?: boolean }>;
+    },
+  ): Promise<void> {
+    return this.requestNoContent(
+      "PUT",
+      `/workspaces/${encodeURIComponent(workspace)}/envs/${encodeURIComponent(env)}/config`,
+      body,
+    );
   }
 
   getRun(runId: string): Promise<RunGetResponse> {

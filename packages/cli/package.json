@@ -1,7 +1,6 @@
 {
   "name": "@opsy/cli",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "bin": {
     "opsy": "./dist/bin.js"
@@ -17,15 +16,19 @@
     "dist"
   ],
   "scripts": {
-    "build": "node -e \"import('node:fs/promises').then(fs => fs.rm('dist', { recursive: true, force: true }).then(() => {}))\" && tsc -p tsconfig.build.json",
+    "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test ./src"
   },
   "dependencies": {
-    "@opsy/contracts": "workspace:*",
     "zod": "^4.1.5"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
-    "@types/node": "^25.3.0"
+    "@opsy/contracts": "workspace:*",
+    "@types/node": "^25.3.0",
+    "tsup": "^8.5.1"
   }
 }

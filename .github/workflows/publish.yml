@@ -1,0 +1,65 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.1.0, 0.2.0, patch, minor)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          INPUT="${{ inputs.version }}"
+          if [[ "$INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "version=$INPUT" >> "$GITHUB_OUTPUT"
+          else
+            CURRENT=$(node -p "require('./packages/cli/package.json').version")
+            NEXT=$(npx semver "$CURRENT" -i "$INPUT")
+            echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd packages/cli && npm version "$VERSION" --no-git-tag-version
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish @opsy/cli
+        run: npm publish --access public
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Tag release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "v$VERSION" || true
+          git tag "v$VERSION"
+          git push && git push --tags
