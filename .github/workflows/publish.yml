@@ -49,6 +49,9 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           jq --arg v "$VERSION" '.version = $v' packages/cli/package.json > tmp.json && mv tmp.json packages/cli/package.json
 
+      - name: Copy root README into CLI package
+        run: cp README.md packages/cli/README.md
+
       - name: Build
         run: bun run build
 
