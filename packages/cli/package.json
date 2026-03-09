@@ -1,6 +1,10 @@
 {
   "name": "@opsyhq/opsy",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opsyhq/opsy"
+  },
   "type": "module",
   "bin": {
     "opsy": "./dist/bin.js"
