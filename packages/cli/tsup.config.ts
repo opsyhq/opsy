@@ -7,5 +7,6 @@ export default defineConfig({
   splitting: true,
   clean: true,
   dts: { resolve: ["@opsy/contracts"] },
+  external: ["yaml"],
   noExternal: ["@opsy/contracts"],
 });
