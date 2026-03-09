@@ -1,0 +1,48 @@
+import { z } from "zod";
+export declare const ErrorCodeEnum: z.ZodEnum<{
+    UNAUTHENTICATED: "UNAUTHENTICATED";
+    FORBIDDEN: "FORBIDDEN";
+    VALIDATION_ERROR: "VALIDATION_ERROR";
+    NOT_FOUND: "NOT_FOUND";
+    CONFLICT: "CONFLICT";
+    PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED";
+    FEATURE_NOT_AVAILABLE: "FEATURE_NOT_AVAILABLE";
+    BILLING_NOT_CONFIGURED: "BILLING_NOT_CONFIGURED";
+    UNRESOLVED_REF: "UNRESOLVED_REF";
+    REF_CYCLE: "REF_CYCLE";
+    PROVIDER_NOT_BOUND: "PROVIDER_NOT_BOUND";
+    APPROVAL_REQUIRED: "APPROVAL_REQUIRED";
+    APPROVAL_REJECTED: "APPROVAL_REJECTED";
+    RUN_FAILED: "RUN_FAILED";
+    LOCK_CONFLICT: "LOCK_CONFLICT";
+    NOT_IMPLEMENTED: "NOT_IMPLEMENTED";
+    INTERNAL_ERROR: "INTERNAL_ERROR";
+}>;
+export type ErrorCode = z.infer<typeof ErrorCodeEnum>;
+export declare const ErrorResponseSchema: z.ZodObject<{
+    isError: z.ZodLiteral<true>;
+    code: z.ZodEnum<{
+        UNAUTHENTICATED: "UNAUTHENTICATED";
+        FORBIDDEN: "FORBIDDEN";
+        VALIDATION_ERROR: "VALIDATION_ERROR";
+        NOT_FOUND: "NOT_FOUND";
+        CONFLICT: "CONFLICT";
+        PLAN_LIMIT_REACHED: "PLAN_LIMIT_REACHED";
+        FEATURE_NOT_AVAILABLE: "FEATURE_NOT_AVAILABLE";
+        BILLING_NOT_CONFIGURED: "BILLING_NOT_CONFIGURED";
+        UNRESOLVED_REF: "UNRESOLVED_REF";
+        REF_CYCLE: "REF_CYCLE";
+        PROVIDER_NOT_BOUND: "PROVIDER_NOT_BOUND";
+        APPROVAL_REQUIRED: "APPROVAL_REQUIRED";
+        APPROVAL_REJECTED: "APPROVAL_REJECTED";
+        RUN_FAILED: "RUN_FAILED";
+        LOCK_CONFLICT: "LOCK_CONFLICT";
+        NOT_IMPLEMENTED: "NOT_IMPLEMENTED";
+        INTERNAL_ERROR: "INTERNAL_ERROR";
+    }>;
+    message: z.ZodString;
+    retryable: z.ZodDefault<z.ZodBoolean>;
+    details: z.ZodOptional<z.ZodUnknown>;
+}, z.core.$strip>;
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+//# sourceMappingURL=errors.d.ts.map

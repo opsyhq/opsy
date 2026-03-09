@@ -77,7 +77,12 @@ ORG
 
 All commands support `--json` for machine-readable output and `--quiet` for minimal output.
 
+## Opsy Skill
+
+The `skills/opsy` directory is an installable skill for AI agent clients (e.g. Claude Code). It teaches agents when and how to use Opsy's MCP server or CLI.
+
+Install it by pointing your agent client at the `skills/opsy` directory.
+
 ## Links
 
 - [opsy.sh](https://opsy.sh)
-- [GitHub](https://github.com/opsyhq/opsy)
