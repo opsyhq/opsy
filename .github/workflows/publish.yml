@@ -47,7 +47,7 @@ jobs:
       - name: Set version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          cd packages/cli && npm version "$VERSION" --no-git-tag-version
+          jq --arg v "$VERSION" '.version = $v' packages/cli/package.json > tmp.json && mv tmp.json packages/cli/package.json
 
       - name: Build
         run: bun run build
