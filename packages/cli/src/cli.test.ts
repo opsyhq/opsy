@@ -598,3 +598,111 @@ describe("cli commands", () => {
     expect(stderr.read()).toContain("No token configured.");
   });
 });
+
+describe("help and error UX", () => {
+  it("shows short error + usage line for missing flag (not full help)", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["auth", "login"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.USAGE);
+    expect(stdout.read()).toBe("");
+    const err = stderr.read();
+    expect(err).toContain("Error:");
+    expect(err).toContain("Usage:");
+    expect(err).not.toContain("WORKSPACES");
+    expect(err).not.toContain("STACKS");
+  });
+
+  it("shows group commands when invoking bare group name", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["auth"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    const out = stdout.read();
+    expect(out).toContain("auth login");
+    expect(out).toContain("auth whoami");
+    expect(out).toContain("auth logout");
+    expect(out).not.toContain("workspace");
+    expect(out).not.toContain("STACKS");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("shows unknown command error with hint for invalid command", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["foo"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.USAGE);
+    expect(stdout.read()).toBe("");
+    const err = stderr.read();
+    expect(err).toContain('unknown command "foo"');
+    expect(err).toContain("Run opsy --help");
+  });
+
+  it("shows full command help with USAGE, FLAGS, EXAMPLES on --help", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["auth", "login", "--help"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    const out = stdout.read();
+    expect(out).toContain("USAGE");
+    expect(out).toContain("FLAGS");
+    expect(out).toContain("EXAMPLES");
+    expect(out).toContain("--token");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("shows group help when using --help on group", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["run", "--help"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    const out = stdout.read();
+    expect(out).toContain("run get");
+    expect(out).toContain("run apply");
+    expect(out).toContain("run list");
+    expect(out).not.toContain("WORKSPACES");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("shows root help on --help with no group", async () => {
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+
+    const exitCode = await runCli(["--help"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    const out = stdout.read();
+    expect(out).toContain("WORKSPACES");
+    expect(out).toContain("STACKS");
+    expect(out).toContain("RUNS");
+    expect(stderr.read()).toBe("");
+  });
+});

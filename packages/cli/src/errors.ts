@@ -28,9 +28,12 @@ export class CliError extends Error {
 }
 
 export class UsageError extends CliError {
-  constructor(message: string, details?: unknown) {
-    super(message, { exitCode: EXIT_CODE.USAGE, code: "USAGE_ERROR", details });
+  readonly command?: string;
+
+  constructor(message: string, options?: { details?: unknown; command?: string }) {
+    super(message, { exitCode: EXIT_CODE.USAGE, code: "USAGE_ERROR", details: options?.details });
     this.name = "UsageError";
+    this.command = options?.command;
   }
 }
 
