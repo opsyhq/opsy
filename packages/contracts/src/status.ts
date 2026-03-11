@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const RunKindEnum = z.enum(["preview", "apply", "import"]);
+export const RunKindEnum = z.enum(["preview", "apply", "import", "destroy"]);
 export type RunKind = z.infer<typeof RunKindEnum>;
 
 export const RunStatusEnum = z.enum([
