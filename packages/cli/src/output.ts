@@ -1,3 +1,4 @@
+import { parseRunResourceChanges } from "@opsy/contracts";
 import { detail, table } from "./format.js";
 import type {
   DraftDetail,
@@ -21,7 +22,9 @@ import type {
   StackStateEnv,
   WhoAmIResponse,
   WorkspaceDetail,
+  WorkspaceEnvVarsResponse,
   WorkspaceListItem,
+  WorkspaceTreeResponse,
 } from "./schemas.js";
 
 export function formatWhoAmI(data: WhoAmIResponse): string {
@@ -102,7 +105,16 @@ export function formatRunGet(data: RunGetResponse): string {
   if (data.previewResult?.changeSummary) pairs.push(["Preview", formatChangeSummary(data.previewResult.changeSummary)]);
   if (data.applyResult?.changeSummary) pairs.push(["Apply", formatChangeSummary(data.applyResult.changeSummary)]);
   if (data.error) pairs.push(["Error", data.error]);
-  return detail(pairs);
+  const lines = [detail(pairs)];
+  const previewChanges = data.previewResult
+    ? (data.previewResult.resourceChanges ?? parseRunResourceChanges(data.previewResult.stdout))
+    : [];
+  if (previewChanges.length > 0) {
+    lines.push("");
+    lines.push("PREVIEW");
+    lines.push(...previewChanges.map((item) => `  ${item.summary}`));
+  }
+  return lines.join("\n");
 }
 
 export function formatDraftList(items: DraftListResponse): string {
@@ -141,6 +153,9 @@ export function formatDraftCreate(data: { draftId: string; shortId: string }): s
 
 export function formatDraftMutation(data: DraftMutationResponse): string {
   const lines = [`Draft updated (${data.shortId})`];
+  if (data.validationSummary) {
+    lines.push(`  ${data.validationSummary}`);
+  }
   for (const warning of data.warnings) {
     lines.push(`  warning: ${warning}`);
   }
@@ -222,7 +237,13 @@ export function formatRunApply(data: StackApplyResponse): string {
   if (data.previewResult?.changeSummary) {
     pairs.push(["Preview", formatChangeSummary(data.previewResult.changeSummary)]);
   }
-  return `Run queued\n\n${detail(pairs)}`;
+  const lines = ["Run queued", "", detail(pairs)];
+  if (data.previewResult?.resourceChanges && data.previewResult.resourceChanges.length > 0) {
+    lines.push("");
+    lines.push("PREVIEW");
+    lines.push(...data.previewResult.resourceChanges.map((item) => `  ${item.summary}`));
+  }
+  return lines.join("\n");
 }
 
 export function formatRunImport(data: StackImportResponse): string {
@@ -275,6 +296,25 @@ export function formatWorkspaceDetail(data: WorkspaceDetail): string {
   ];
   if (data.notes) pairs.push(["Notes", data.notes]);
   return detail(pairs);
+}
+
+export function formatWorkspaceTree(data: WorkspaceTreeResponse): string {
+  return data.tree;
+}
+
+export function formatWorkspaceEnvVars(data: WorkspaceEnvVarsResponse): string {
+  if (data.variables.length === 0) {
+    return `No variables found for ${data.workspaceSlug}/${data.envSlug}.`;
+  }
+
+  return table(
+    ["Key", "Sensitive", "Value"],
+    data.variables.map((item) => [
+      item.key,
+      item.sensitive ? "yes" : "no",
+      item.sensitive ? "[redacted]" : item.value,
+    ]),
+  );
 }
 
 export function formatStackList(items: StackListItem[]): string {

@@ -5,6 +5,12 @@ export type CommandMeta = {
   examples?: string[];
 };
 
+export type GroupMeta = {
+  title: string;
+  description: string;
+  commands: string[];
+};
+
 export const COMMAND_META: Record<string, CommandMeta> = {
   "auth login": {
     description: "Authenticate with a personal access token.",
@@ -64,6 +70,22 @@ export const COMMAND_META: Record<string, CommandMeta> = {
     ],
     examples: ["opsy workspace delete acme"],
   },
+  "workspace tree": {
+    description: "Show the workspace, stack, and env tree.",
+    usage: "opsy workspace tree [--json]",
+    flags: ["--json              Output as JSON"],
+    examples: ["opsy workspace tree"],
+  },
+  "workspace env-vars": {
+    description: "List environment variables for a workspace env.",
+    usage: "opsy workspace env-vars --workspace <slug> --env <slug> [--json]",
+    flags: [
+      "--workspace <slug>  Workspace slug (required)",
+      "--env <slug>        Environment slug (required)",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy workspace env-vars --workspace acme --env prod"],
+  },
   "stack list": {
     description: "List stacks in a workspace.",
     usage: "opsy stack list --workspace <slug> [--json]",
@@ -84,15 +106,19 @@ export const COMMAND_META: Record<string, CommandMeta> = {
   },
   "stack create": {
     description: "Create a new stack.",
-    usage: "opsy stack create --workspace <slug> --slug <slug> [--yaml <yaml>] [--quiet] [--json]",
+    usage: "opsy stack create --workspace <slug> --slug <slug> [--yaml <yaml> | --file <path> | stdin] [--quiet] [--json]",
     flags: [
       "--workspace <slug>  Workspace slug (required)",
       "--slug <slug>       Stack slug (required)",
       "--yaml <yaml>       Initial YAML spec",
+      "--file <path>       Read initial YAML spec from file",
       "--quiet             Print only the slug",
       "--json              Output as JSON",
     ],
-    examples: ["opsy stack create --workspace acme --slug api"],
+    examples: [
+      "opsy stack create --workspace acme --slug api",
+      "cat spec.yaml | opsy stack create --workspace acme --slug api",
+    ],
   },
   "stack set-notes": {
     description: "Set or clear stack notes.",
@@ -200,6 +226,15 @@ export const COMMAND_META: Record<string, CommandMeta> = {
     flags: ["--json              Output as JSON"],
     examples: ["opsy draft get deadbeef"],
   },
+  "draft render": {
+    description: "Render the current draft YAML.",
+    usage: "opsy draft render <draft-short-id> [--quiet] [--json]",
+    flags: [
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy draft render deadbeef"],
+  },
   "draft create": {
     description: "Create a new draft.",
     usage: "opsy draft create --workspace <slug> --stack <slug> [--name <name>] [--quiet] [--json]",
@@ -213,7 +248,7 @@ export const COMMAND_META: Record<string, CommandMeta> = {
     examples: ["opsy draft create --workspace acme --stack api"],
   },
   "draft write": {
-    description: "Write YAML spec to a draft.",
+    description: "Write and validate a full YAML spec for a draft.",
     usage: "opsy draft write [draft-short-id] [--workspace <slug> --stack <slug>] [--yaml <yaml> | --file <path> | stdin] [--quiet] [--json]",
     flags: [
       "--workspace <slug>  Workspace slug (when no short ID given)",
@@ -320,11 +355,11 @@ export const COMMAND_META: Record<string, CommandMeta> = {
   },
   "run apply": {
     description: "Queue an apply run.",
-    usage: "opsy run apply --workspace <slug> --stack <slug> --env <slug> [--draft <short-id> | --revision <n>] [--preview-only] [--reason <text>] [--quiet] [--json]",
+    usage: "opsy run apply --workspace <slug> --stack <slug> [--env <slug>] [--draft <short-id> | --revision <n>] [--preview-only] [--reason <text>] [--quiet] [--json]",
     flags: [
       "--workspace <slug>  Workspace slug (required)",
       "--stack <slug>      Stack slug (required)",
-      "--env <slug>        Environment slug (required)",
+      "--env <slug>        Environment slug (defaults when only one env exists)",
       "--draft <short-id>  Draft to apply",
       "--revision <n>      Revision number to apply",
       "--preview-only      Preview changes without applying",
@@ -336,6 +371,19 @@ export const COMMAND_META: Record<string, CommandMeta> = {
       "opsy run apply --workspace acme --stack api --env prod --draft deadbeef",
       "opsy run apply --workspace acme --stack api --env prod --revision 7 --preview-only",
     ],
+  },
+  "run destroy": {
+    description: "Queue a destroy run.",
+    usage: "opsy run destroy --workspace <slug> --stack <slug> [--env <slug>] [--reason <text>] [--quiet] [--json]",
+    flags: [
+      "--workspace <slug>  Workspace slug (required)",
+      "--stack <slug>      Stack slug (required)",
+      "--env <slug>        Environment slug (defaults when only one env exists)",
+      "--reason <text>     Reason for the run",
+      "--quiet             Print only the run ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy run destroy --workspace acme --stack api --env prod"],
   },
   "run wait": {
     description: "Wait for a run to finish.",
@@ -353,7 +401,7 @@ export const COMMAND_META: Record<string, CommandMeta> = {
     flags: [
       "--workspace <slug>  Workspace slug (required)",
       "--stack <slug>      Stack slug (required)",
-      "--env <slug>        Environment slug",
+      "--env <slug>        Environment slug (defaults when only one env exists)",
       "--targets <json>    Import targets as JSON",
       "--file <path>       Read targets from file",
       "--reason <text>     Reason for the import",
@@ -423,42 +471,235 @@ export const COMMAND_META: Record<string, CommandMeta> = {
       "opsy org set-notes --clear",
     ],
   },
+  "schema search": {
+    description: "Search resource type tokens with compact key property hints.",
+    usage: "opsy schema search <query...> [--json]",
+    flags: ["--json              Output as JSON"],
+    examples: ["opsy schema search aws s3 bucket"],
+  },
+  "schema get": {
+    description: "Show a compact resource schema.",
+    usage: "opsy schema get <token> [--json]",
+    flags: ["--json              Output as JSON"],
+    examples: ["opsy schema get aws:s3/bucket:Bucket"],
+  },
+  "schema scaffold": {
+    description: "Generate a starter scaffold for a resource token.",
+    usage: "opsy schema scaffold <token> [--json]",
+    flags: ["--json              Output as JSON"],
+    examples: ["opsy schema scaffold aws:ec2/vpc:Vpc"],
+  },
+  "resource add": {
+    description: "Add a resource to a draft.",
+    usage: "opsy resource add --draft <short-id> --name <name> --type <token> [--file <path> | stdin] [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Resource name (required)",
+      "--type <token>      Pulumi type token (required)",
+      "--file <path>       Read initial props JSON from file",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy resource add --draft deadbeef --name bucket --type aws:s3/bucket:Bucket < props.json"],
+  },
+  "resource remove": {
+    description: "Remove a resource from a draft.",
+    usage: "opsy resource remove --draft <short-id> --name <name> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Resource name (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy resource remove --draft deadbeef --name bucket"],
+  },
+  "resource set-props": {
+    description: "Recursively merge properties into a resource.",
+    usage: "opsy resource set-props --draft <short-id> --name <name> [--file <path> | stdin] [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Resource name (required)",
+      "--file <path>       Read props JSON from file",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["cat props.json | opsy resource set-props --draft deadbeef --name bucket"],
+  },
+  "resource set-prop": {
+    description: "Set one property by JSON Pointer.",
+    usage: "opsy resource set-prop --draft <short-id> --name <name> --prop <pointer> --value-json <json> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Resource name (required)",
+      "--prop <pointer>    RFC 6901 JSON Pointer (required)",
+      "--value-json <json> JSON value to assign (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy resource set-prop --draft deadbeef --name bucket --prop /tags/Environment --value-json '\"prod\"'"],
+  },
+  "ref add": {
+    description: "Add an import reference alias.",
+    usage: "opsy ref add --draft <short-id> --name <name> --source <source> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Import alias (required)",
+      "--source <source>   Strict stacks.<slug>.<output> source (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy ref add --draft deadbeef --name vpcId --source stacks.network.vpcId"],
+  },
+  "ref remove": {
+    description: "Remove an import reference alias.",
+    usage: "opsy ref remove --draft <short-id> --name <name> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Import alias (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy ref remove --draft deadbeef --name vpcId"],
+  },
+  "output set": {
+    description: "Set an output expression.",
+    usage: "opsy output set --draft <short-id> --name <name> --value <value> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Output name (required)",
+      "--value <value>     String expression value (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy output set --draft deadbeef --name bucketId --value '${bucket.id}'"],
+  },
+  "output remove": {
+    description: "Remove an output.",
+    usage: "opsy output remove --draft <short-id> --name <name> [--quiet] [--json]",
+    flags: [
+      "--draft <short-id>  Draft short ID (required)",
+      "--name <name>       Output name (required)",
+      "--quiet             Print only the short ID",
+      "--json              Output as JSON",
+    ],
+    examples: ["opsy output remove --draft deadbeef --name bucketId"],
+  },
 };
 
-export const GROUP_META: Record<string, { description: string; commands: string[] }> = {
+export const GROUP_META: Record<string, GroupMeta> = {
   auth: {
+    title: "AUTH",
     description: "Work with authentication.",
     commands: ["auth login", "auth whoami", "auth logout"],
   },
   workspace: {
+    title: "WORKSPACES",
     description: "Manage workspaces.",
-    commands: ["workspace list", "workspace get", "workspace create", "workspace delete"],
+    commands: ["workspace list", "workspace get", "workspace create", "workspace delete", "workspace tree", "workspace env-vars"],
   },
   stack: {
+    title: "STACKS",
     description: "Manage stacks.",
     commands: ["stack list", "stack get", "stack create", "stack set-notes", "stack delete", "stack state"],
   },
   env: {
+    title: "ENVIRONMENTS",
     description: "Manage environments.",
     commands: ["env list", "env create", "env delete", "env config-get", "env config-set"],
   },
   draft: {
+    title: "DRAFTS",
     description: "Manage drafts.",
-    commands: ["draft list", "draft get", "draft create", "draft write", "draft edit", "draft validate", "draft delete"],
+    commands: ["draft list", "draft get", "draft render", "draft create", "draft write", "draft edit", "draft validate", "draft delete"],
   },
   revision: {
+    title: "REVISIONS",
     description: "Manage revisions.",
     commands: ["revision list", "revision get", "revision delete"],
   },
   run: {
+    title: "RUNS",
     description: "Manage runs.",
-    commands: ["run get", "run list", "run apply", "run wait", "run import", "run cancel"],
+    commands: ["run get", "run list", "run apply", "run destroy", "run wait", "run import", "run cancel"],
+  },
+  schema: {
+    title: "SCHEMAS",
+    description: "Inspect resource schemas.",
+    commands: ["schema search", "schema get", "schema scaffold"],
+  },
+  resource: {
+    title: "RESOURCES",
+    description: "Mutate draft resources.",
+    commands: ["resource add", "resource remove", "resource set-props", "resource set-prop"],
+  },
+  ref: {
+    title: "REFS",
+    description: "Mutate draft imports.",
+    commands: ["ref add", "ref remove"],
+  },
+  output: {
+    title: "OUTPUTS",
+    description: "Mutate draft outputs.",
+    commands: ["output set", "output remove"],
   },
   org: {
+    title: "ORG",
     description: "Manage org variables and notes.",
     commands: ["org list", "org set", "org delete", "org get-notes", "org set-notes"],
   },
 };
+
+const ROOT_GROUP_ORDER = [
+  "auth",
+  "workspace",
+  "stack",
+  "env",
+  "draft",
+  "revision",
+  "run",
+  "schema",
+  "resource",
+  "ref",
+  "output",
+  "org",
+] as const;
+
+function trimSentence(text: string): string {
+  return text.endsWith(".") ? text.slice(0, -1) : text;
+}
+
+function formatCommandListing(commands: string[]): string[] {
+  return commands.map((command) => {
+    const meta = COMMAND_META[command];
+    const padded = command.padEnd(20);
+    return `  ${padded} ${trimSentence(meta?.description ?? "")}`;
+  });
+}
+
+function buildRootHelp(): string {
+  const lines = [
+    "opsy — infrastructure management CLI",
+    "",
+    "USAGE",
+    "  opsy <command> <subcommand> [flags]",
+  ];
+
+  for (const groupName of ROOT_GROUP_ORDER) {
+    const group = GROUP_META[groupName];
+    if (!group) continue;
+    lines.push("", group.title, ...formatCommandListing(group.commands));
+  }
+
+  lines.push(
+    "",
+    "FLAGS",
+    "  --json             Output as JSON",
+    "  --quiet            Minimal output (IDs only)",
+    "  --help, -h         Show help",
+  );
+
+  return lines.join("\n");
+}
 
 export function getUsageLine(command: string): string {
   const meta = COMMAND_META[command];
@@ -468,83 +709,14 @@ export function getUsageLine(command: string): string {
 
 export function getHelpText(command?: string): string {
   if (!command) {
-    return [
-      "opsy — infrastructure management CLI",
-      "",
-      "USAGE",
-      "  opsy <command> <subcommand> [flags]",
-      "",
-      "AUTH",
-      "  auth login         Authenticate with a personal access token",
-      "  auth whoami        Show the authenticated user",
-      "  auth logout        Remove stored credentials",
-      "",
-      "WORKSPACES",
-      "  workspace list     List all workspaces",
-      "  workspace get      Show workspace details",
-      "  workspace create   Create a new workspace",
-      "  workspace delete   Delete a workspace",
-      "",
-      "STACKS",
-      "  stack list         List stacks in a workspace",
-      "  stack get          Show stack details and deployments",
-      "  stack create       Create a new stack",
-      "  stack set-notes    Set or clear stack notes",
-      "  stack delete       Delete a stack",
-      "  stack state        Show deployed stack state",
-      "",
-      "ENVIRONMENTS",
-      "  env list           List environments in a workspace",
-      "  env create         Create a new environment",
-      "  env delete         Delete an environment",
-      "  env config-get     Show environment config",
-      "  env config-set     Set environment config",
-      "",
-      "DRAFTS",
-      "  draft list         List drafts for a stack",
-      "  draft get          Show draft details and spec",
-      "  draft create       Create a new draft",
-      "  draft write        Write YAML spec to a draft",
-      "  draft edit         Edit a draft with string replacement",
-      "  draft validate     Validate a draft",
-      "  draft delete       Delete a draft",
-      "",
-      "REVISIONS",
-      "  revision list      List revisions for a stack",
-      "  revision get       Show revision details and spec",
-      "  revision delete    Delete a revision",
-      "",
-      "RUNS",
-      "  run get            Show run details",
-      "  run list           List runs for a workspace",
-      "  run apply          Queue an apply run",
-      "  run wait           Wait for a run to finish",
-      "  run import         Import existing resources",
-      "  run cancel         Cancel a run",
-      "",
-      "ORG",
-      "  org list           List org variables",
-      "  org set            Set an org variable",
-      "  org delete         Delete an org variable",
-      "  org get-notes      Show org notes",
-      "  org set-notes      Set or clear org notes",
-      "",
-      "FLAGS",
-      "  --json             Output as JSON",
-      "  --quiet            Minimal output (IDs only)",
-      "  --help, -h         Show help",
-    ].join("\n");
+    return buildRootHelp();
   }
 
   // Group-level help
   const group = GROUP_META[command];
   if (group) {
     const lines: string[] = [group.description, "", "COMMANDS"];
-    for (const cmd of group.commands) {
-      const meta = COMMAND_META[cmd];
-      const padded = cmd.padEnd(20);
-      lines.push(`  ${padded} ${meta?.description ?? ""}`);
-    }
+    lines.push(...formatCommandListing(group.commands));
     lines.push("", `Run opsy ${command} <command> --help for more information.`);
     return lines.join("\n");
   }

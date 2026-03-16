@@ -84,7 +84,6 @@ export function registerRunCommands(parent: Command, ctx: CommandContext) {
       const allOpts = cmd.optsWithGlobals();
       const workspace = requireOpt(opts.workspace, "workspace", "run apply");
       const stack = requireOpt(opts.stack, "stack", "run apply");
-      const envSlug = requireOpt(opts.env, "env", "run apply");
 
       if (opts.draft && opts.revision) {
         throw new UsageError("run apply accepts either --draft or --revision, not both.", { command: "run apply" });
@@ -92,10 +91,29 @@ export function registerRunCommands(parent: Command, ctx: CommandContext) {
 
       const client = await createAuthedClient(allOpts, ctx);
       const result = await client.applyRun(workspace, stack, {
-        envSlug,
+        ...(opts.env ? { envSlug: opts.env } : {}),
         ...(opts.draft ? { draftShortId: opts.draft } : {}),
         ...(opts.revision ? { revisionNumber: parsePositiveInt(opts.revision, "--revision", "run apply") } : {}),
         ...(opts.previewOnly ? { previewOnly: true } : {}),
+        ...(opts.reason ? { reason: opts.reason } : {}),
+      });
+      writeSuccess(ctx.stdout, allOpts, result, formatRunApply(result), result.runId);
+    });
+
+  addCommonOptions(group.command("destroy"))
+    .description("Queue a destroy run.")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--stack <slug>", "Stack slug")
+    .option("--env <slug>", "Environment slug")
+    .option("--reason <text>", "Reason for the run")
+    .configureHelp({ formatHelp: () => getHelpText("run destroy") + "\n" })
+    .action(async (opts, cmd) => {
+      const allOpts = cmd.optsWithGlobals();
+      const workspace = requireOpt(opts.workspace, "workspace", "run destroy");
+      const stack = requireOpt(opts.stack, "stack", "run destroy");
+      const client = await createAuthedClient(allOpts, ctx);
+      const result = await client.destroyRun(workspace, stack, {
+        ...(opts.env ? { envSlug: opts.env } : {}),
         ...(opts.reason ? { reason: opts.reason } : {}),
       });
       writeSuccess(ctx.stdout, allOpts, result, formatRunApply(result), result.runId);
@@ -129,15 +147,10 @@ export function registerRunCommands(parent: Command, ctx: CommandContext) {
       const stack = requireOpt(opts.stack, "stack", "run import");
 
       const payload = await resolveImportPayload(opts, ctx);
-      const envSlug = opts.env ?? payload.envSlug;
-      if (!envSlug) {
-        throw new UsageError("run import requires --env or envSlug in the JSON payload.", { command: "run import" });
-      }
-
       const reason = opts.reason ?? payload.reason;
       const client = await createAuthedClient(allOpts, ctx);
       const result = await client.importRun(workspace, stack, {
-        envSlug,
+        ...(opts.env ?? payload.envSlug ? { envSlug: opts.env ?? payload.envSlug } : {}),
         targets: payload.targets,
         ...(reason ? { reason } : {}),
       });

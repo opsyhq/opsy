@@ -50,6 +50,17 @@ export function registerDraftCommands(parent: Command, ctx: CommandContext) {
       writeSuccess(ctx.stdout, allOpts, draft, formatDraftDetail(draft));
     });
 
+  addCommonOptions(group.command("render"))
+    .description("Render the current draft YAML.")
+    .argument("<short-id>", "Draft short ID")
+    .configureHelp({ formatHelp: () => getHelpText("draft render") + "\n" })
+    .action(async (shortId, opts, cmd) => {
+      const allOpts = cmd.optsWithGlobals();
+      const client = await createAuthedClient(allOpts, ctx);
+      const result = await client.renderDraft(shortId);
+      writeSuccess(ctx.stdout, allOpts, result, result.renderedYaml, result.shortId);
+    });
+
   addCommonOptions(group.command("create"))
     .description("Create a new draft.")
     .option("--workspace <slug>", "Workspace slug")

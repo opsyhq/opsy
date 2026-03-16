@@ -1,7 +1,16 @@
 import type { Command } from "commander";
 import type { CommandContext } from "./helpers.js";
 import { getHelpText } from "../help.js";
-import { addCommonOptions, createGroupCommand, write, writeSuccess, createAuthedClient, requireOpt, resolveTextInput } from "./helpers.js";
+import {
+  addCommonOptions,
+  createGroupCommand,
+  write,
+  writeSuccess,
+  createAuthedClient,
+  requireOpt,
+  resolveOptionalTextInput,
+  resolveTextInput,
+} from "./helpers.js";
 import { formatStackDetail, formatStackList, formatStackState } from "../output.js";
 
 export function registerStackCommands(parent: Command, ctx: CommandContext) {
@@ -38,14 +47,29 @@ export function registerStackCommands(parent: Command, ctx: CommandContext) {
     .option("--workspace <slug>", "Workspace slug")
     .option("--slug <slug>", "Stack slug")
     .option("--yaml <yaml>", "Initial YAML spec")
+    .option("--file <path>", "Read initial YAML spec from file")
     .configureHelp({ formatHelp: () => getHelpText("stack create") + "\n" })
     .action(async (opts, cmd) => {
       const allOpts = cmd.optsWithGlobals();
       const workspace = requireOpt(opts.workspace, "workspace", "stack create");
       const slug = requireOpt(opts.slug, "slug", "stack create");
+      const yaml = await resolveOptionalTextInput(opts, ctx, {
+        valueFlag: "yaml",
+        fileFlag: "file",
+        description: "initial YAML spec",
+        allowEmpty: false,
+      });
       const client = await createAuthedClient(allOpts, ctx);
-      const data = await client.createStack(workspace, { slug, ...(opts.yaml ? { yaml: opts.yaml } : {}) });
-      writeSuccess(ctx.stdout, allOpts, data, `Stack created (${data.slug})`, data.slug);
+      const data = await client.createStack(workspace, { slug, ...(yaml ? { yaml } : {}) });
+      writeSuccess(
+        ctx.stdout,
+        allOpts,
+        data,
+        yaml
+          ? `Stack created with initial spec (${data.slug})`
+          : `Stack created (${data.slug}). Next: use "draft write --workspace ${workspace} --stack ${slug}" to set the initial spec.`,
+        data.slug,
+      );
     });
 
   addCommonOptions(group.command("set-notes"))

@@ -5,14 +5,49 @@ import { getHelpText, getUsageLine } from "./help.js";
 import { registerAuthCommands } from "./commands/auth.js";
 import { registerWorkspaceCommands } from "./commands/workspace.js";
 import { registerStackCommands } from "./commands/stack.js";
+import { registerSchemaCommands } from "./commands/schema.js";
 import { registerEnvCommands } from "./commands/env.js";
 import { registerDraftCommands } from "./commands/draft.js";
+import { registerResourceCommands } from "./commands/resource.js";
+import { registerRefCommands } from "./commands/ref.js";
+import { registerOutputCommands } from "./commands/output.js";
 import { registerRevisionCommands } from "./commands/revision.js";
 import { registerRunCommands } from "./commands/run.js";
 import { registerOrgCommands } from "./commands/org.js";
 import { buildContext, write, type CommandContext, type RunCliOptions } from "./commands/helpers.js";
 
 export type { CliIO, RunCliOptions, CommandContext } from "./commands/helpers.js";
+
+const CLI_BOOLEAN_GLOBAL_FLAGS = new Set(["--json", "--quiet"]);
+const CLI_VALUE_GLOBAL_FLAGS = new Set(["--token", "--api-url"]);
+
+function normalizeGlobalFlags(argv: string[]): string[] {
+  const globals: string[] = [];
+  const rest: string[] = [];
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+
+    if (CLI_BOOLEAN_GLOBAL_FLAGS.has(token)) {
+      globals.push(token);
+      continue;
+    }
+
+    if (CLI_VALUE_GLOBAL_FLAGS.has(token)) {
+      globals.push(token);
+      const next = argv[index + 1];
+      if (next !== undefined) {
+        globals.push(next);
+        index += 1;
+      }
+      continue;
+    }
+
+    rest.push(token);
+  }
+
+  return [...rest, ...globals];
+}
 
 function buildProgram(context: CommandContext): Command {
   const program = new Command("opsy")
@@ -41,8 +76,12 @@ function buildProgram(context: CommandContext): Command {
   registerAuthCommands(program, context);
   registerWorkspaceCommands(program, context);
   registerStackCommands(program, context);
+  registerSchemaCommands(program, context);
   registerEnvCommands(program, context);
   registerDraftCommands(program, context);
+  registerResourceCommands(program, context);
+  registerRefCommands(program, context);
+  registerOutputCommands(program, context);
   registerRevisionCommands(program, context);
   registerRunCommands(program, context);
   registerOrgCommands(program, context);
@@ -52,17 +91,18 @@ function buildProgram(context: CommandContext): Command {
 
 export async function runCli(argv: string[], options: RunCliOptions = {}): Promise<number> {
   const context = buildContext(options);
+  const normalizedArgv = normalizeGlobalFlags(argv);
   const program = buildProgram(context);
 
   try {
-    await program.parseAsync(argv, { from: "user" });
+    await program.parseAsync(normalizedArgv, { from: "user" });
     return EXIT_CODE.OK;
   } catch (error) {
     if (error instanceof CommanderError) {
       if (error.exitCode === 0) return EXIT_CODE.OK;
       // Strip Commander's "error: " prefix to avoid "Error: error: ..."
       const msg = error.message.replace(/^error:\s*/i, "");
-      const asJson = argv.includes("--json");
+      const asJson = normalizedArgv.includes("--json");
       if (asJson) {
         write(context.stderr, stringifyJson(toErrorPayload(new UsageError(msg))));
       } else {
@@ -73,7 +113,7 @@ export async function runCli(argv: string[], options: RunCliOptions = {}): Promi
     }
 
     const payload = toErrorPayload(error);
-    const asJson = argv.includes("--json");
+    const asJson = normalizedArgv.includes("--json");
 
     if (asJson) {
       write(context.stderr, stringifyJson(payload));

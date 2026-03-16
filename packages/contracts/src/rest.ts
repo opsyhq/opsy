@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SlugSchema } from "./common.js";
+import { JsonObjectSchema, JsonValueSchema, SlugSchema } from "./common.js";
 import { ImportTargetSchema, RunSchema } from "./entities.js";
 
 export const SetEnvConfigSchema = z.object({
@@ -96,6 +96,7 @@ export const DraftMutationResponseSchema = z.object({
   draftId: z.string().min(1),
   shortId: z.string().min(1),
   warnings: z.array(z.string()),
+  validationSummary: z.string().min(1).optional(),
 });
 export type DraftMutationResponse = z.infer<typeof DraftMutationResponseSchema>;
 
@@ -104,6 +105,147 @@ export const DraftValidateResponseSchema = z.object({
   warnings: z.array(z.string()),
 });
 export type DraftValidateResponse = z.infer<typeof DraftValidateResponseSchema>;
+
+const NextActionSchema = z.object({
+  command: z.string().min(1),
+  args: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const DraftRenderResponseSchema = z.object({
+  summary: z.string().min(1),
+  warnings: z.array(z.string()),
+  shortId: z.string().min(1),
+  draftId: z.string().min(1),
+  specHash: z.string().min(1),
+  renderedYaml: z.string(),
+  fragment: z.unknown().optional(),
+  nextAction: NextActionSchema.optional(),
+});
+export type DraftRenderResponse = z.infer<typeof DraftRenderResponseSchema>;
+
+export const DraftMutationCommandResponseSchema = z.object({
+  summary: z.string().min(1),
+  warnings: z.array(z.string()),
+  shortId: z.string().min(1),
+  draftId: z.string().min(1),
+  specHash: z.string().min(1),
+  fragment: z.unknown(),
+  nextAction: NextActionSchema.optional(),
+});
+export type DraftMutationCommandResponse = z.infer<typeof DraftMutationCommandResponseSchema>;
+
+export const ResourceAddRequestSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  properties: JsonObjectSchema.optional(),
+});
+export type ResourceAddRequest = z.infer<typeof ResourceAddRequestSchema>;
+
+export const ResourceSetPropsRequestSchema = z.object({
+  properties: JsonObjectSchema,
+});
+export type ResourceSetPropsRequest = z.infer<typeof ResourceSetPropsRequestSchema>;
+
+export const ResourceSetPropRequestSchema = z.object({
+  pointer: z.string().min(1),
+  value: JsonValueSchema,
+});
+export type ResourceSetPropRequest = z.infer<typeof ResourceSetPropRequestSchema>;
+
+export const RefAddRequestSchema = z.object({
+  name: z.string().min(1),
+  source: z.string().min(1),
+});
+export type RefAddRequest = z.infer<typeof RefAddRequestSchema>;
+
+export const OutputSetRequestSchema = z.object({
+  value: z.string(),
+});
+export type OutputSetRequest = z.infer<typeof OutputSetRequestSchema>;
+
+export const SchemaSearchResultSchema = z.object({
+  token: z.string().min(1),
+  summary: z.string(),
+  score: z.number(),
+  keyProps: z.array(z.string()),
+});
+
+export const SchemaSearchResponseSchema = z.object({
+  summary: z.string().min(1),
+  items: z.array(SchemaSearchResultSchema),
+});
+export type SchemaSearchResponse = z.infer<typeof SchemaSearchResponseSchema>;
+
+export const SchemaFieldHintSchema = z.object({
+  name: z.string().min(1),
+  typeHint: z.string().min(1),
+  required: z.boolean().optional(),
+  enumHints: z.array(z.string()).optional(),
+  description: z.string().nullable().optional(),
+});
+
+export const SchemaNestedTypeSchema = z.object({
+  token: z.string().min(1),
+  properties: z.array(SchemaFieldHintSchema),
+});
+
+export const SchemaGetResponseSchema = z.object({
+  summary: z.string().min(1),
+  token: z.string().min(1),
+  requiredInputs: z.array(SchemaFieldHintSchema),
+  commonOptionalInputs: z.array(SchemaFieldHintSchema),
+  nestedTypes: z.array(SchemaNestedTypeSchema),
+});
+export type SchemaGetResponse = z.infer<typeof SchemaGetResponseSchema>;
+
+export const SchemaScaffoldResponseSchema = z.object({
+  summary: z.string().min(1),
+  token: z.string().min(1),
+  requiredInputs: z.array(z.string()),
+  minimalProps: JsonObjectSchema,
+  commonOptionalProps: z.array(SchemaFieldHintSchema),
+  notes: z.array(z.string()),
+});
+export type SchemaScaffoldResponse = z.infer<typeof SchemaScaffoldResponseSchema>;
+
+export const WorkspaceTreeStackSchema = z.object({
+  slug: z.string().min(1),
+  status: z.string().min(1),
+  resourceCount: z.number().int().nonnegative(),
+  importsFrom: z.array(z.string()),
+  exports: z.array(z.string()),
+  lastRunStatus: z.string().nullable(),
+});
+export type WorkspaceTreeStack = z.infer<typeof WorkspaceTreeStackSchema>;
+
+export const WorkspaceTreeWorkspaceSchema = z.object({
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  envs: z.array(z.string()),
+  stacks: z.array(WorkspaceTreeStackSchema),
+});
+export type WorkspaceTreeWorkspace = z.infer<typeof WorkspaceTreeWorkspaceSchema>;
+
+export const WorkspaceTreeResponseSchema = z.object({
+  summary: z.string().min(1),
+  tree: z.string().min(1),
+  workspaces: z.array(WorkspaceTreeWorkspaceSchema),
+});
+export type WorkspaceTreeResponse = z.infer<typeof WorkspaceTreeResponseSchema>;
+
+export const WorkspaceEnvVarSchema = z.object({
+  key: z.string().min(1),
+  value: z.string(),
+  sensitive: z.boolean(),
+});
+export type WorkspaceEnvVar = z.infer<typeof WorkspaceEnvVarSchema>;
+
+export const WorkspaceEnvVarsResponseSchema = z.object({
+  workspaceSlug: z.string().min(1),
+  envSlug: z.string().min(1),
+  variables: z.array(WorkspaceEnvVarSchema),
+});
+export type WorkspaceEnvVarsResponse = z.infer<typeof WorkspaceEnvVarsResponseSchema>;
 
 export const RunWaitQuerySchema = z.object({
   timeoutSeconds: z.coerce.number().int().min(1).max(3600).optional(),
@@ -123,15 +265,24 @@ export const RunWaitResponseSchema = z.object({
 export type RunWaitResponse = z.infer<typeof RunWaitResponseSchema>;
 
 export const StackImportRequestSchema = z.object({
-  envSlug: SlugSchema,
+  envSlug: SlugSchema.optional(),
   targets: z.array(ImportTargetSchema).min(1).max(100),
   reason: z.string().min(1).max(2000).optional(),
 });
 export type StackImportRequest = z.infer<typeof StackImportRequestSchema>;
 
 export const ChangeSummarySchema = z.record(z.string(), z.number());
+export const RunResourceChangeSchema = z.object({
+  op: z.string().min(1),
+  type: z.string().min(1),
+  name: z.string().min(1),
+  action: z.string().min(1),
+  summary: z.string().min(1),
+});
+export type RunResourceChange = z.infer<typeof RunResourceChangeSchema>;
 export const RunChangeSummarySchema = z.object({
   changeSummary: ChangeSummarySchema,
+  resourceChanges: z.array(RunResourceChangeSchema).optional(),
 });
 export type RunChangeSummary = z.infer<typeof RunChangeSummarySchema>;
 
@@ -148,7 +299,7 @@ export const StackImportResponseSchema = z.object({
 export type StackImportResponse = z.infer<typeof StackImportResponseSchema>;
 
 export const StackApplyRequestSchema = z.object({
-  envSlug: SlugSchema,
+  envSlug: SlugSchema.optional(),
   draftShortId: z.string().min(1).optional(),
   revisionNumber: z.number().int().positive().optional(),
   previewOnly: z.boolean().optional(),

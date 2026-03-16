@@ -1,7 +1,9 @@
 import { z } from "zod";
 import {
   ApprovalStatusEnum,
-  DraftMutationResponseSchema,
+  DraftMutationCommandResponseSchema,
+  DraftRenderResponseSchema,
+  DraftMutationResponseSchema as ContractDraftMutationResponseSchema,
   DraftValidateResponseSchema,
   EnvSchema,
   ErrorResponseSchema,
@@ -11,10 +13,23 @@ import {
   RunKindEnum,
   RunStatusEnum,
   RunWaitResponseSchema,
+  SchemaGetResponseSchema,
+  SchemaScaffoldResponseSchema,
+  SchemaSearchResponseSchema as ContractSchemaSearchResponseSchema,
   StackApplyResponseSchema,
   StackImportResponseSchema,
   StackSchema,
+  WorkspaceEnvVarsResponseSchema,
   WorkspaceSchema,
+  WorkspaceTreeResponseSchema,
+} from "@opsy/contracts";
+export {
+  DraftMutationCommandResponseSchema,
+  DraftRenderResponseSchema,
+  SchemaGetResponseSchema,
+  SchemaScaffoldResponseSchema,
+  WorkspaceEnvVarsResponseSchema,
+  WorkspaceTreeResponseSchema,
 } from "@opsy/contracts";
 
 export const WorkOsUserSchema = z.object({
@@ -54,6 +69,13 @@ const RunActorSchema = WorkOsUserSchema.nullable();
 const RunResultSchema = z.object({
   changeSummary: z.record(z.string(), z.number()),
   stdout: z.string(),
+  resourceChanges: z.array(z.object({
+    op: z.string().min(1),
+    type: z.string().min(1),
+    name: z.string().min(1),
+    action: z.string().min(1),
+    summary: z.string().min(1),
+  })).optional(),
 });
 
 export const RunListItemSchema = z.object({
@@ -147,8 +169,20 @@ export const DraftCreateResponseSchema = z.object({
 });
 export type DraftCreateResponse = z.infer<typeof DraftCreateResponseSchema>;
 
+export const DraftMutationResponseSchema = ContractDraftMutationResponseSchema.extend({
+  validationSummary: z.string().min(1).optional(),
+});
+
+export const SchemaSearchResponseSchema = ContractSchemaSearchResponseSchema.extend({
+  items: ContractSchemaSearchResponseSchema.shape.items.element.extend({
+    keyProps: z.array(z.string()),
+  }).array(),
+});
+
 export type DraftMutationResponse = z.infer<typeof DraftMutationResponseSchema>;
 export type DraftValidateResponse = z.infer<typeof DraftValidateResponseSchema>;
+export type DraftRenderResponse = z.infer<typeof DraftRenderResponseSchema>;
+export type DraftMutationCommandResponse = z.infer<typeof DraftMutationCommandResponseSchema>;
 
 export const RevisionSummarySchema = z.object({
   id: z.string().min(1),
@@ -192,6 +226,9 @@ export type RestRunSummary = z.infer<typeof RestRunSummarySchema>;
 export type RunWaitResponse = z.infer<typeof RunWaitResponseSchema>;
 export type StackApplyResponse = z.infer<typeof StackApplyResponseSchema>;
 export type StackImportResponse = z.infer<typeof StackImportResponseSchema>;
+export type SchemaSearchResponse = z.infer<typeof SchemaSearchResponseSchema>;
+export type SchemaGetResponse = z.infer<typeof SchemaGetResponseSchema>;
+export type SchemaScaffoldResponse = z.infer<typeof SchemaScaffoldResponseSchema>;
 
 export const RunCancelResponseSchema = RestRunSummarySchema;
 export type RunCancelResponse = z.infer<typeof RunCancelResponseSchema>;
@@ -209,6 +246,8 @@ export type WorkspaceDetail = z.infer<typeof WorkspaceDetailSchema>;
 
 export const WorkspaceCreateResponseSchema = WorkspaceSchema;
 export type WorkspaceCreateResponse = z.infer<typeof WorkspaceCreateResponseSchema>;
+export type WorkspaceTreeResponse = z.infer<typeof WorkspaceTreeResponseSchema>;
+export type WorkspaceEnvVarsResponse = z.infer<typeof WorkspaceEnvVarsResponseSchema>;
 
 // --- Stacks ---
 
@@ -320,7 +359,6 @@ export const EnvConfigResponseSchema = z.object({
 export type EnvConfigResponse = z.infer<typeof EnvConfigResponseSchema>;
 
 export {
-  DraftMutationResponseSchema,
   DraftValidateResponseSchema,
   ErrorResponseSchema,
   OrgNotesSchema,

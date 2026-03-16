@@ -3,7 +3,9 @@ import { ApiError, CliError } from "./errors.js";
 import {
   DraftCreateResponseSchema,
   DraftDetailSchema,
+  DraftMutationCommandResponseSchema,
   DraftListResponseSchema,
+  DraftRenderResponseSchema,
   DraftMutationResponseSchema,
   DraftValidateResponseSchema,
   EnvConfigResponseSchema,
@@ -21,6 +23,9 @@ import {
   RunGetResponseSchema,
   RunListResponseSchema,
   RunWaitResponseSchema,
+  SchemaGetResponseSchema,
+  SchemaScaffoldResponseSchema,
+  SchemaSearchResponseSchema,
   StackApplyResponseSchema,
   StackDetailSchema,
   StackImportResponseSchema,
@@ -28,11 +33,15 @@ import {
   StackStateResponseSchema,
   WhoAmIResponseSchema,
   WorkspaceDetailSchema,
+  WorkspaceEnvVarsResponseSchema,
   WorkspaceListResponseSchema,
+  WorkspaceTreeResponseSchema,
   type DraftCreateResponse,
   type DraftDetail,
   type DraftListResponse,
+  type DraftMutationCommandResponse,
   type DraftMutationResponse,
+  type DraftRenderResponse,
   type DraftValidateResponse,
   type EnvConfigResponse,
   type EnvCreateResponse,
@@ -47,6 +56,9 @@ import {
   type RunGetResponse,
   type RunListResponse,
   type RunWaitResponse,
+  type SchemaGetResponse,
+  type SchemaScaffoldResponse,
+  type SchemaSearchResponse,
   type StackApplyResponse,
   type StackDetail,
   type StackImportResponse,
@@ -54,7 +66,9 @@ import {
   type StackStateEnv,
   type WhoAmIResponse,
   type WorkspaceDetail,
+  type WorkspaceEnvVarsResponse,
   type WorkspaceListItem,
+  type WorkspaceTreeResponse,
 } from "./schemas.js";
 
 export type ApiClientOptions = {
@@ -101,6 +115,10 @@ export class ApiClient {
 
   getWorkspace(workspace: string): Promise<WorkspaceDetail> {
     return this.request("GET", `/workspaces/${encodeURIComponent(workspace)}`, WorkspaceDetailSchema);
+  }
+
+  getWorkspaceTree(): Promise<WorkspaceTreeResponse> {
+    return this.request("GET", "/workspaces/tree", WorkspaceTreeResponseSchema);
   }
 
   createWorkspace(body: { slug: string; name: string; envs?: Array<{ slug: string }> }): Promise<WorkspaceCreateResponse> {
@@ -185,6 +203,14 @@ export class ApiClient {
       "GET",
       `/workspaces/${encodeURIComponent(workspace)}/envs/${encodeURIComponent(env)}/config`,
       EnvConfigResponseSchema,
+    );
+  }
+
+  getWorkspaceEnvVars(workspace: string, env: string): Promise<WorkspaceEnvVarsResponse> {
+    return this.request(
+      "GET",
+      `/workspaces/${encodeURIComponent(workspace)}/env-vars/${encodeURIComponent(env)}`,
+      WorkspaceEnvVarsResponseSchema,
     );
   }
 
@@ -363,6 +389,120 @@ export class ApiClient {
     );
   }
 
+  renderDraft(draftShortId: string): Promise<DraftRenderResponse> {
+    return this.request(
+      "GET",
+      `/drafts/${encodeURIComponent(draftShortId)}/render`,
+      DraftRenderResponseSchema,
+    );
+  }
+
+  addResource(
+    draftShortId: string,
+    body: { name: string; type: string; properties?: Record<string, unknown> },
+  ): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "POST",
+      `/drafts/${encodeURIComponent(draftShortId)}/resources`,
+      DraftMutationCommandResponseSchema,
+      body,
+    );
+  }
+
+  removeResource(draftShortId: string, name: string): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "DELETE",
+      `/drafts/${encodeURIComponent(draftShortId)}/resources/${encodeURIComponent(name)}`,
+      DraftMutationCommandResponseSchema,
+    );
+  }
+
+  setResourceProps(
+    draftShortId: string,
+    name: string,
+    properties: Record<string, unknown>,
+  ): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "PATCH",
+      `/drafts/${encodeURIComponent(draftShortId)}/resources/${encodeURIComponent(name)}/props`,
+      DraftMutationCommandResponseSchema,
+      { properties },
+    );
+  }
+
+  setResourceProp(
+    draftShortId: string,
+    name: string,
+    pointer: string,
+    value: unknown,
+  ): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "PATCH",
+      `/drafts/${encodeURIComponent(draftShortId)}/resources/${encodeURIComponent(name)}/prop`,
+      DraftMutationCommandResponseSchema,
+      { pointer, value },
+    );
+  }
+
+  addRef(draftShortId: string, name: string, source: string): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "POST",
+      `/drafts/${encodeURIComponent(draftShortId)}/refs`,
+      DraftMutationCommandResponseSchema,
+      { name, source },
+    );
+  }
+
+  removeRef(draftShortId: string, name: string): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "DELETE",
+      `/drafts/${encodeURIComponent(draftShortId)}/refs/${encodeURIComponent(name)}`,
+      DraftMutationCommandResponseSchema,
+    );
+  }
+
+  setOutput(draftShortId: string, name: string, value: string): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "PUT",
+      `/drafts/${encodeURIComponent(draftShortId)}/outputs/${encodeURIComponent(name)}`,
+      DraftMutationCommandResponseSchema,
+      { value },
+    );
+  }
+
+  removeOutput(draftShortId: string, name: string): Promise<DraftMutationCommandResponse> {
+    return this.request(
+      "DELETE",
+      `/drafts/${encodeURIComponent(draftShortId)}/outputs/${encodeURIComponent(name)}`,
+      DraftMutationCommandResponseSchema,
+    );
+  }
+
+  searchSchemas(query: string, limit = 10): Promise<SchemaSearchResponse> {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    return this.request(
+      "GET",
+      `/schemas/search?${params.toString()}`,
+      SchemaSearchResponseSchema,
+    );
+  }
+
+  getSchema(token: string): Promise<SchemaGetResponse> {
+    return this.request(
+      "GET",
+      `/schemas/${encodeURIComponent(token)}`,
+      SchemaGetResponseSchema,
+    );
+  }
+
+  getSchemaScaffold(token: string): Promise<SchemaScaffoldResponse> {
+    return this.request(
+      "GET",
+      `/schemas/${encodeURIComponent(token)}/scaffold`,
+      SchemaScaffoldResponseSchema,
+    );
+  }
+
   listRevisions(workspace: string, stack: string, options: ListRevisionsOptions = {}): Promise<RevisionListResponse> {
     const query = new URLSearchParams();
     if (options.cursor) {
@@ -406,7 +546,7 @@ export class ApiClient {
     workspace: string,
     stack: string,
     body: {
-      envSlug: string;
+      envSlug?: string;
       draftShortId?: string;
       revisionNumber?: number;
       previewOnly?: boolean;
@@ -421,11 +561,27 @@ export class ApiClient {
     );
   }
 
+  destroyRun(
+    workspace: string,
+    stack: string,
+    body: {
+      envSlug?: string;
+      reason?: string;
+    },
+  ): Promise<StackApplyResponse> {
+    return this.request(
+      "POST",
+      `/workspaces/${encodeURIComponent(workspace)}/stacks/${encodeURIComponent(stack)}/destroy`,
+      StackApplyResponseSchema,
+      body,
+    );
+  }
+
   importRun(
     workspace: string,
     stack: string,
     body: {
-      envSlug: string;
+      envSlug?: string;
       targets: Array<{ type: string; name: string; id: string }>;
       reason?: string;
     },

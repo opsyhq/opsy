@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import type { CommandContext } from "./helpers.js";
 import { getHelpText } from "../help.js";
 import { addCommonOptions, createGroupCommand, write, writeSuccess, createAuthedClient, requireOpt } from "./helpers.js";
-import { formatWorkspaceDetail, formatWorkspaceList } from "../output.js";
+import { formatWorkspaceDetail, formatWorkspaceEnvVars, formatWorkspaceList, formatWorkspaceTree } from "../output.js";
 
 export function registerWorkspaceCommands(parent: Command, ctx: CommandContext) {
   const group = createGroupCommand(parent, "workspace", ctx)
@@ -27,6 +27,30 @@ export function registerWorkspaceCommands(parent: Command, ctx: CommandContext) 
       const client = await createAuthedClient(allOpts, ctx);
       const data = await client.getWorkspace(slug);
       writeSuccess(ctx.stdout, allOpts, data, formatWorkspaceDetail(data));
+    });
+
+  addCommonOptions(group.command("tree"))
+    .description("Show the workspace, stack, and env tree.")
+    .configureHelp({ formatHelp: () => getHelpText("workspace tree") + "\n" })
+    .action(async (opts, cmd) => {
+      const allOpts = cmd.optsWithGlobals();
+      const client = await createAuthedClient(allOpts, ctx);
+      const data = await client.getWorkspaceTree();
+      writeSuccess(ctx.stdout, allOpts, data, formatWorkspaceTree(data));
+    });
+
+  addCommonOptions(group.command("env-vars"))
+    .description("List environment variables for a workspace env.")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--env <slug>", "Environment slug")
+    .configureHelp({ formatHelp: () => getHelpText("workspace env-vars") + "\n" })
+    .action(async (opts, cmd) => {
+      const allOpts = cmd.optsWithGlobals();
+      const workspace = requireOpt(opts.workspace, "workspace", "workspace env-vars");
+      const env = requireOpt(opts.env, "env", "workspace env-vars");
+      const client = await createAuthedClient(allOpts, ctx);
+      const data = await client.getWorkspaceEnvVars(workspace, env);
+      writeSuccess(ctx.stdout, allOpts, data, formatWorkspaceEnvVars(data));
     });
 
   addCommonOptions(group.command("create"))

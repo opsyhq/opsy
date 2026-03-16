@@ -130,6 +130,98 @@ describe("cli commands", () => {
     expect(stderr.read()).toBe("");
   });
 
+  it("renders the workspace tree through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/workspaces/tree");
+      expect(init?.method).toBe("GET");
+      return new Response(JSON.stringify({
+        summary: "Found 1 workspace(s).",
+        tree: "workspaces\n  acme [envs: prod]\n    api (rev 3 — prod:r3) — 2 resources, exports: bucketId, last run: applied",
+        workspaces: [
+          {
+            slug: "acme",
+            name: "Acme",
+            envs: ["prod"],
+            stacks: [
+              {
+                slug: "api",
+                status: "rev 3 — prod:r3",
+                resourceCount: 2,
+                importsFrom: [],
+                exports: ["bucketId"],
+                lastRunStatus: "applied",
+              },
+            ],
+          },
+        ],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["workspace", "tree"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain("acme [envs: prod]");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("lists workspace env vars through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/workspaces/acme/env-vars/prod");
+      expect(init?.method).toBe("GET");
+      return new Response(JSON.stringify({
+        workspaceSlug: "acme",
+        envSlug: "prod",
+        variables: [
+          { key: "DB_NAME", value: "raspberry", sensitive: false },
+          { key: "DB_PASSWORD", value: "secret", sensitive: true },
+        ],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["workspace", "env-vars", "--workspace", "acme", "--env", "prod"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    const out = stdout.read();
+    expect(out).toContain("DB_NAME");
+    expect(out).toContain("raspberry");
+    expect(out).toContain("[redacted]");
+    expect(stderr.read()).toBe("");
+  });
+
   it("passes run list filters through to the workspace runs endpoint", async () => {
     const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
     tempDirs.push(dir);
@@ -217,6 +309,7 @@ describe("cli commands", () => {
         return new Response(JSON.stringify({
           draftId: "33333333-3333-4333-8333-333333333333",
           shortId: "deadbeef",
+          validationSummary: "Validated draft successfully. Resolved 2 import(s).",
           warnings: [],
         }), { status: 200, headers: { "content-type": "application/json" } });
       }
@@ -234,6 +327,50 @@ describe("cli commands", () => {
 
     expect(exitCode).toBe(EXIT_CODE.OK);
     expect(stdout.read()).toBe("deadbeef\n");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("creates a stack with an initial spec from stdin", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/workspaces/acme/stacks");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe(JSON.stringify({
+        slug: "api",
+        yaml: "resources: {}\n",
+      }));
+      return new Response(JSON.stringify({
+        id: "11111111-1111-4111-8111-111111111111",
+        workspaceId: "22222222-2222-4222-8222-222222222222",
+        slug: "api",
+        headRevisionId: null,
+        createdAt: "2026-03-07T10:00:00.000Z",
+        updatedAt: "2026-03-07T10:00:00.000Z",
+        notes: null,
+      }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["stack", "create", "--workspace", "acme", "--slug", "api"], {
+      env,
+      fetchImpl,
+      stdin: createInput("resources: {}\n"),
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain("Stack created with initial spec (api)");
     expect(stderr.read()).toBe("");
   });
 
@@ -311,6 +448,322 @@ describe("cli commands", () => {
     expect(stderr.read()).toBe("");
   });
 
+  it("renders a draft through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/render");
+      expect(init?.method).toBe("GET");
+      return new Response(JSON.stringify({
+        summary: 'Rendered draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_123",
+        renderedYaml: "resources: {}\n",
+        fragment: { resources: {} },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["draft", "render", "deadbeef"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toBe("resources: {}\n\n");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("sets a resource property through commander flags", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/resources/bucket/prop");
+      expect(init?.method).toBe("PATCH");
+      expect(init?.body).toBe(JSON.stringify({
+        pointer: "/tags/Environment",
+        value: "prod",
+      }));
+      return new Response(JSON.stringify({
+        summary: 'Set property "/tags/Environment" on resource "bucket" in draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_456",
+        fragment: { pointer: "/tags/Environment", value: "prod" },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["resource", "set-prop", "--draft", "deadbeef", "--name", "bucket", "--prop", "/tags/Environment", "--value-json", "\"prod\""], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain('Set property "/tags/Environment"');
+    expect(stderr.read()).toBe("");
+  });
+
+  it("searches schemas through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/schemas/search?q=aws+s3+bucket&limit=10");
+      expect(init?.method).toBe("GET");
+      return new Response(JSON.stringify({
+        summary: "Found 1 schema match(es).",
+        items: [{
+          token: "aws:s3/bucket:Bucket",
+          summary: "S3 bucket",
+          score: 0.12,
+          keyProps: ["bucket: string", "tags: object"],
+        }],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["schema", "search", "aws", "s3", "bucket"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain("aws:s3/bucket:Bucket");
+    expect(stdout.read()).toContain("bucket: string");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("queues run apply without requiring env when the API resolves it", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/workspaces/acme/stacks/api/apply");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe(JSON.stringify({ draftShortId: "deadbeef" }));
+      return new Response(JSON.stringify({
+        status: "ready",
+        workspaceId: "11111111-1111-4111-8111-111111111111",
+        stackId: "22222222-2222-4222-8222-222222222222",
+        envId: "33333333-3333-4333-8333-333333333333",
+        runId: "44444444-4444-4444-8444-444444444444",
+        jobId: "55555555-5555-4555-8555-555555555555",
+        run: {
+          id: "44444444-4444-4444-8444-444444444444",
+          shortId: "deadbeef",
+          workspaceId: "11111111-1111-4111-8111-111111111111",
+          stackId: "22222222-2222-4222-8222-222222222222",
+          envId: "33333333-3333-4333-8333-333333333333",
+          revisionId: null,
+          draftId: "66666666-6666-4666-8666-666666666666",
+          importTargets: null,
+          kind: "apply",
+          status: "awaiting_approval",
+          reason: null,
+          requestedBy: null,
+          queuedAt: "2026-03-07T10:00:00.000Z",
+          startedAt: "2026-03-07T10:00:05.000Z",
+          finishedAt: null,
+          error: null,
+          previewResult: {
+            changeSummary: { create: 1 },
+            stdout: "+ aws:rds/instance:Instance db\n",
+          },
+        },
+        previewResult: {
+          changeSummary: { create: 1 },
+          resourceChanges: [
+            {
+              op: "+",
+              type: "aws:rds/instance:Instance",
+              name: "db",
+              action: "create",
+              summary: "+ aws:rds/instance:Instance db",
+            },
+          ],
+        },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["run", "apply", "--workspace", "acme", "--stack", "api", "--draft", "deadbeef"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain("Preview");
+    expect(stderr.read()).toBe("");
+  });
+
+  it("adds a resource with stdin JSON through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/resources");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe(JSON.stringify({
+        name: "bucket",
+        type: "aws:s3/bucket:Bucket",
+        properties: { tags: { Environment: "prod" } },
+      }));
+      return new Response(JSON.stringify({
+        summary: 'Added resource "bucket" to draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_123",
+        fragment: { name: "bucket" },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["resource", "add", "--draft", "deadbeef", "--name", "bucket", "--type", "aws:s3/bucket:Bucket"], {
+      env,
+      fetchImpl,
+      stdin: createInput(JSON.stringify({ tags: { Environment: "prod" } })),
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain('Added resource "bucket"');
+    expect(stderr.read()).toBe("");
+  });
+
+  it("adds a ref through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/refs");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe(JSON.stringify({ name: "vpcId", source: "stacks.vpc.vpcId" }));
+      return new Response(JSON.stringify({
+        summary: 'Added ref "vpcId" to draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_123",
+        fragment: { name: "vpcId" },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["ref", "add", "--draft", "deadbeef", "--name", "vpcId", "--source", "stacks.vpc.vpcId"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain('Added ref "vpcId"');
+    expect(stderr.read()).toBe("");
+  });
+
+  it("sets an output through commander", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token", apiUrl: "http://localhost:4000" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/outputs/bucketId");
+      expect(init?.method).toBe("PUT");
+      expect(init?.body).toBe(JSON.stringify({ value: "${bucket.id}" }));
+      return new Response(JSON.stringify({
+        summary: 'Set output "bucketId" in draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_123",
+        fragment: { name: "bucketId" },
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["output", "set", "--draft", "deadbeef", "--name", "bucketId", "--value", "${bucket.id}"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toContain('Set output "bucketId"');
+    expect(stderr.read()).toBe("");
+  });
+
   it("calls the stack apply REST endpoint and preserves preview metadata", async () => {
     const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
     tempDirs.push(dir);
@@ -353,6 +806,15 @@ describe("cli commands", () => {
         },
         previewResult: {
           changeSummary: { create: 1 },
+          resourceChanges: [
+            {
+              op: "+",
+              type: "aws:s3/bucket:Bucket",
+              name: "assets",
+              action: "create",
+              summary: "+ aws:s3/bucket:Bucket assets",
+            },
+          ],
         },
       }), { status: 201, headers: { "content-type": "application/json" } });
     }) as unknown as typeof fetch;
@@ -373,6 +835,7 @@ describe("cli commands", () => {
     expect(out).toContain("Run queued");
     expect(out).toContain("ready");
     expect(out).toContain("create=1");
+    expect(out).toContain("+ aws:s3/bucket:Bucket assets");
     expect(stderr.read()).toBe("");
   });
 
@@ -596,6 +1059,44 @@ describe("cli commands", () => {
     expect(exitCode).toBe(EXIT_CODE.UNAUTHENTICATED);
     expect(stdout.read()).toBe("");
     expect(stderr.read()).toContain("No token configured.");
+  });
+
+  it("accepts global flags before commander commands", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "opsy-cli-"));
+    tempDirs.push(dir);
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const env = { HOME: dir };
+    const store = new FileConfigStore(env);
+    await store.save({ version: 1, token: "stored-token" });
+
+    const fetchImpl = mock(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("http://localhost:4000/drafts/deadbeef/render");
+      expect(init?.method).toBe("GET");
+      return new Response(JSON.stringify({
+        summary: 'Rendered draft "deadbeef".',
+        warnings: [],
+        shortId: "deadbeef",
+        draftId: "draft_1",
+        specHash: "hash_123",
+        renderedYaml: "resources: {}\n",
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const exitCode = await runCli(["--api-url", "http://localhost:4000", "draft", "render", "deadbeef"], {
+      env,
+      fetchImpl,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      configStore: store,
+    });
+
+    expect(exitCode).toBe(EXIT_CODE.OK);
+    expect(stdout.read()).toBe("resources: {}\n\n");
+    expect(stderr.read()).toBe("");
   });
 });
 

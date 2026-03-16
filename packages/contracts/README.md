@@ -8,7 +8,7 @@ Shared runtime contracts for Opsy control-plane and worker-plane code.
 - Shared status enums and transition guards.
 - Spec validation and canonical hashing helpers.
 - Cross-stack and local output ref parsing (`extractRefsFromValue`, `extractLocalResourceDependencies`).
-- MCP input/output schemas and REST payload schemas.
+- REST payload schemas and shared runtime helpers.
 - Stable API error-code schema.
 - Shared JSON primitive types (`JsonValue`, `JsonObject`, `JsonPrimitive`).
 
@@ -35,8 +35,6 @@ bun run --cwd packages/contracts build
 ```ts
 import {
   WorkspaceSchema,
-  ManageStackInputSchema,
-  RequestApplyInputSchema,
   ErrorCodeEnum,
   StackStateSchema,
   type JsonObject,
@@ -51,8 +49,8 @@ import {
 - `packages/contracts/src/common.ts` — `JsonValue`, `JsonObject`, `JsonPrimitive`, `SlugSchema`, canonical JSON helpers
 - `packages/contracts/src/entities.ts` — entity schemas and types
 - `packages/contracts/src/errors.ts` — `ErrorCodeEnum`
-- `packages/contracts/src/mcp.ts` — MCP tool input/output schemas
 - `packages/contracts/src/rest.ts` — REST payload schemas
+- `packages/contracts/src/run-preview.ts` — shared run preview parsing helpers
 - `packages/contracts/src/status.ts` — status enums and transition guards
 - `packages/contracts/src/spec.ts` — `StackSpec`, `StackResourceDef`, spec validation
 - `packages/contracts/src/refs.ts` — ref parsing, `extractRefsFromValue`, `extractLocalResourceDependencies`
