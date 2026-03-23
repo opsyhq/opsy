@@ -87,6 +87,7 @@ export type ChangeMutation = {
   slug?: string;
   type?: string;
   inputs?: unknown;
+  removeInputPaths?: string[];
   sensitiveInputPaths?: string[];
   cloudId?: string;
   importId?: string;
