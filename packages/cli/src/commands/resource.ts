@@ -1,120 +1,221 @@
-import type { Command } from "commander";
-import type { CommandContext } from "./helpers.js";
-import { getHelpText } from "../help.js";
-import {
-  addCommonOptions,
-  createAuthedClient,
-  createGroupCommand,
-  readInputSource,
-  writeSuccess,
-} from "./helpers.js";
-import { UsageError } from "../errors.js";
-import { hasReadableStdin } from "./helpers.js";
+import { Command } from "commander";
+import { getToken, getApiUrl } from "../config";
+import { apiRequest } from "../client";
+import { formatTable, output } from "../output";
 
-async function readJsonPayload(
-  opts: { file?: string },
-  ctx: CommandContext,
-  label: string,
-  options?: { optional?: boolean },
-): Promise<unknown | undefined> {
-  const hasStdin = hasReadableStdin(ctx.stdin);
-  if (opts.file && hasStdin && opts.file !== "-") {
-    throw new UsageError(`Use either --file or stdin for ${label}, not both.`);
-  }
+type GlobalFlags = {
+  token?: string;
+  apiUrl?: string;
+  json?: boolean;
+  quiet?: boolean;
+};
 
-  if (!opts.file && !hasStdin) {
-    if (options?.optional) return undefined;
-    throw new UsageError(`Provide ${label} via --file or stdin.`);
-  }
+type ResourceDeps = {
+  apiRequest: typeof apiRequest;
+  getToken: typeof getToken;
+  getApiUrl: typeof getApiUrl;
+  log: (message?: string) => void;
+  error: (message?: string) => void;
+  exit: (code: number) => never;
+};
 
-  const raw = await readInputSource(ctx, opts.file);
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new UsageError(`${label} must be valid JSON.`);
-  }
+const defaultDeps: ResourceDeps = {
+  apiRequest,
+  getToken,
+  getApiUrl,
+  log: (message?: string) => console.log(message),
+  error: (message?: string) => console.error(message),
+  exit: (code: number) => process.exit(code),
+};
+
+function getRootFlags(command: Command): GlobalFlags {
+  let current = command;
+  while (current.parent) current = current.parent;
+  return current.opts<GlobalFlags>();
 }
 
-export function registerResourceCommands(parent: Command, ctx: CommandContext) {
-  const group = createGroupCommand(parent, "resource", ctx)
-    .description("Mutate draft resources.");
+function handleCliError(error: unknown, deps: ResourceDeps): never {
+  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+  return deps.exit(1);
+}
 
-  addCommonOptions(group.command("add"))
-    .description("Add a resource to a draft.")
-    .option("--draft <short-id>", "Draft short ID")
-    .option("--name <name>", "Resource name")
-    .option("--type <token>", "Pulumi type token")
-    .option("--file <path>", "Read initial props JSON from file")
-    .configureHelp({ formatHelp: () => getHelpText("resource add") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      if (!opts.draft) throw new UsageError("resource add requires --draft.", { command: "resource add" });
-      if (!opts.name) throw new UsageError("resource add requires --name.", { command: "resource add" });
-      if (!opts.type) throw new UsageError("resource add requires --type.", { command: "resource add" });
-      const properties = await readJsonPayload({ file: opts.file }, ctx, "initial props JSON", { optional: true });
-      const client = await createAuthedClient(allOpts, ctx);
-      const result = await client.addResource(opts.draft, {
-        name: opts.name,
-        type: opts.type,
-        ...(properties && typeof properties === "object" && !Array.isArray(properties) ? { properties: properties as Record<string, unknown> } : {}),
-      });
-      writeSuccess(ctx.stdout, allOpts, result, result.summary, result.shortId);
-    });
+export function createResourceCommand(deps: ResourceDeps = defaultDeps) {
+  const resourceCmd = new Command("resource").description("Manage resources");
 
-  addCommonOptions(group.command("remove"))
-    .description("Remove a resource from a draft.")
-    .option("--draft <short-id>", "Draft short ID")
-    .option("--name <name>", "Resource name")
-    .configureHelp({ formatHelp: () => getHelpText("resource remove") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      if (!opts.draft) throw new UsageError("resource remove requires --draft.", { command: "resource remove" });
-      if (!opts.name) throw new UsageError("resource remove requires --name.", { command: "resource remove" });
-      const client = await createAuthedClient(allOpts, ctx);
-      const result = await client.removeResource(opts.draft, opts.name);
-      writeSuccess(ctx.stdout, allOpts, result, result.summary, result.shortId);
-    });
-
-  addCommonOptions(group.command("set-props"))
-    .description("Recursively merge properties into a resource.")
-    .option("--draft <short-id>", "Draft short ID")
-    .option("--name <name>", "Resource name")
-    .option("--file <path>", "Read props JSON from file")
-    .configureHelp({ formatHelp: () => getHelpText("resource set-props") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      if (!opts.draft) throw new UsageError("resource set-props requires --draft.", { command: "resource set-props" });
-      if (!opts.name) throw new UsageError("resource set-props requires --name.", { command: "resource set-props" });
-      const properties = await readJsonPayload({ file: opts.file }, ctx, "properties JSON");
-      if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
-        throw new UsageError("resource set-props requires a JSON object via --file or stdin.", { command: "resource set-props" });
-      }
-      const client = await createAuthedClient(allOpts, ctx);
-      const result = await client.setResourceProps(opts.draft, opts.name, properties as Record<string, unknown>);
-      writeSuccess(ctx.stdout, allOpts, result, result.summary, result.shortId);
-    });
-
-  addCommonOptions(group.command("set-prop"))
-    .description("Set one property by JSON Pointer.")
-    .option("--draft <short-id>", "Draft short ID")
-    .option("--name <name>", "Resource name")
-    .option("--prop <pointer>", "RFC 6901 JSON Pointer")
-    .option("--value-json <json>", "JSON value to assign")
-    .configureHelp({ formatHelp: () => getHelpText("resource set-prop") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      if (!opts.draft) throw new UsageError("resource set-prop requires --draft.", { command: "resource set-prop" });
-      if (!opts.name) throw new UsageError("resource set-prop requires --name.", { command: "resource set-prop" });
-      if (!opts.prop) throw new UsageError("resource set-prop requires --prop.", { command: "resource set-prop" });
-      if (!opts.valueJson) throw new UsageError("resource set-prop requires --value-json.", { command: "resource set-prop" });
-      let value: unknown;
+  resourceCmd
+    .command("ls")
+    .description("List resources")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .option("--parent <slug>", "Parent resource slug")
+    .action(async function (this: Command, opts: { project: string; env: string; parent?: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      const qs = opts.parent ? `?parent=${opts.parent}` : "";
       try {
-        value = JSON.parse(opts.valueJson);
-      } catch {
-        throw new UsageError("--value-json must be valid JSON.", { command: "resource set-prop" });
+        const resources = await deps.apiRequest<any[]>(`/projects/${opts.project}/environments/${opts.env}/resources${qs}`, { token, apiUrl });
+        if (flags.json) return output(resources, flags);
+        if (!resources.length) {
+          deps.log("No resources found.");
+          return;
+        }
+        deps.log(formatTable(
+          ["SLUG", "TYPE", "STATUS"],
+          resources.map((resource) => [resource.slug, resource.type, resource.status]),
+        ));
+      } catch (error) {
+        handleCliError(error, deps);
       }
-      const client = await createAuthedClient(allOpts, ctx);
-      const result = await client.setResourceProp(opts.draft, opts.name, opts.prop, value);
-      writeSuccess(ctx.stdout, allOpts, result, result.summary, result.shortId);
     });
+
+  resourceCmd
+    .command("get <slug>")
+    .description("Get resource details")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .option("--live", "Include live cloud outputs")
+    .action(async function (this: Command, slug: string, opts: { project: string; env: string; live?: boolean }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const resource = await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, { token, apiUrl });
+        if (!opts.live) {
+          output(resource, flags);
+          return;
+        }
+
+        try {
+          const live = await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl });
+          output({ ...resource, live }, flags);
+        } catch (error) {
+          deps.error(`Warning: failed to read live outputs: ${error instanceof Error ? error.message : String(error)}`);
+          output(resource, flags);
+        }
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  resourceCmd
+    .command("sync <slug>")
+    .description("Re-read a resource from cloud and refresh conflict state")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .action(async function (this: Command, slug: string, opts: { project: string; env: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const result = await deps.apiRequest<any>(
+          `/projects/${opts.project}/environments/${opts.env}/resources/${slug}/sync`,
+          { method: "POST", token, apiUrl },
+        );
+        output(result, flags);
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  resourceCmd
+    .command("accept-live <slug>")
+    .description("Accept the recorded live conflict snapshot into stored inputs")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .action(async function (this: Command, slug: string, opts: { project: string; env: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const result = await deps.apiRequest<any>(
+          `/projects/${opts.project}/environments/${opts.env}/resources/${slug}/accept-live`,
+          { method: "POST", token, apiUrl },
+        );
+        output(result, flags);
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  resourceCmd
+    .command("promote-current <slug>")
+    .description("Create a change to push stored desired inputs back to the cloud")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .action(async function (this: Command, slug: string, opts: { project: string; env: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const result = await deps.apiRequest<any>(
+          `/projects/${opts.project}/environments/${opts.env}/resources/${slug}/promote-current`,
+          { method: "POST", token, apiUrl },
+        );
+        if (flags.json) {
+          output(result, flags);
+          return;
+        }
+        deps.log(`Change ${result.change.shortId} created with ${result.operations.length} operation(s).`);
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  resourceCmd
+    .command("restore <slug>")
+    .description("Create a change that restores the resource inputs captured before an operation")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .requiredOption("--operation <id>", "Operation ID to restore from")
+    .action(async function (this: Command, slug: string, opts: { project: string; env: string; operation: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const result = await deps.apiRequest<any>(
+          `/projects/${opts.project}/environments/${opts.env}/resources/${slug}/restore`,
+          { method: "POST", body: { operationId: opts.operation }, token, apiUrl },
+        );
+        if (flags.json) {
+          output(result, flags);
+          return;
+        }
+        deps.log(`Change ${result.change.shortId} created with ${result.operations.length} operation(s).`);
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  resourceCmd
+    .command("tree")
+    .description("Show resource tree")
+    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--env <slug>", "Environment slug")
+    .option("--depth <n>", "Tree depth", "3")
+    .action(async function (this: Command, opts: { project: string; env: string; depth: string }) {
+      const flags = getRootFlags(this);
+      const token = deps.getToken(flags);
+      const apiUrl = deps.getApiUrl(flags);
+      try {
+        const tree = await deps.apiRequest<any[]>(`/projects/${opts.project}/environments/${opts.env}/resources/tree?depth=${opts.depth}`, { token, apiUrl });
+        if (flags.json) return output(tree, flags);
+        if (!tree.length) {
+          deps.log("No resources found.");
+          return;
+        }
+        function printNode(node: any, indent: string) {
+          const status = node.status === "live" ? "\u2713" : node.status === "failed" ? "\u2717" : "\u00b7";
+          deps.log(`${indent}${status} ${node.slug} (${node.type}) [${node.status}]`);
+          for (const child of node.children ?? []) printNode(child, indent + "  ");
+        }
+        for (const node of tree) printNode(node, "");
+      } catch (error) {
+        handleCliError(error, deps);
+      }
+    });
+
+  return resourceCmd;
 }
+
+export const resourceCmd = createResourceCommand();

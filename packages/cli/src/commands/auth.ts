@@ -1,87 +1,50 @@
-import type { Command } from "commander";
-import type { CommandContext } from "./helpers.js";
-import { getHelpText } from "../help.js";
-import { addCommonOptions, createGroupCommand, write, writeSuccess, createAuthedClient, requireOpt } from "./helpers.js";
-import { resolveApiUrl, type CliConfig } from "../config.js";
-import { createApiClient } from "../client.js";
-import { formatAuthLogin, formatWhoAmI, stringifyJson } from "../output.js";
-import { EXIT_CODE } from "../errors.js";
+import { Command } from "commander";
+import { loadConfig, saveConfig } from "../config";
 
-export function registerAuthCommands(parent: Command, ctx: CommandContext) {
-  const group = createGroupCommand(parent, "auth", ctx)
-    .description("Work with authentication.");
+export const authCmd = new Command("auth").description("Authentication");
 
-  addCommonOptions(group.command("login"))
-    .description("Authenticate with a personal access token.")
-    .configureHelp({ formatHelp: () => getHelpText("auth login") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const token = requireOpt(allOpts.token, "token", "auth login");
-      const currentConfig = await ctx.store.load();
-      const resolvedApiUrl = resolveApiUrl(currentConfig, ctx.env, allOpts.apiUrl);
-      const client = createApiClient({
-        apiUrl: resolvedApiUrl.value,
-        token,
-        fetchImpl: ctx.fetchImpl,
-      });
-      const whoami = await client.getWhoAmI();
+authCmd
+  .command("login")
+  .description("Store API token for CLI access")
+  .requiredOption("--token <token>", "Personal Access Token")
+  .option("--api-url <url>", "API URL")
+  .action((opts: { token: string; apiUrl?: string }) => {
+    const config = loadConfig();
+    config.token = opts.token;
+    if (opts.apiUrl) config.apiUrl = opts.apiUrl;
+    saveConfig(config);
+    console.log("Credentials saved to ~/.opsy/config.json");
+  });
 
-      const nextConfig: CliConfig = {
-        version: 1,
-        token,
-        ...(resolvedApiUrl.source !== "default" || currentConfig.apiUrl
-          ? { apiUrl: resolvedApiUrl.value }
-          : {}),
-      };
-      await ctx.store.save(nextConfig);
+authCmd
+  .command("logout")
+  .description("Clear stored credentials")
+  .action(() => {
+    saveConfig({});
+    console.log("Credentials cleared.");
+  });
 
-      if (allOpts.json) {
-        write(
-          ctx.stdout,
-          stringifyJson({
-            ok: true,
-            apiUrl: resolvedApiUrl.value,
-            storage: {
-              kind: "file",
-              path: ctx.store.getPath(),
-            },
-            whoami,
-          }),
-        );
-        return;
-      }
-
-      write(
-        ctx.stdout,
-        `${formatAuthLogin(whoami, ctx.store.getPath())}\n`,
-      );
-    });
-
-  addCommonOptions(group.command("whoami"))
-    .description("Show the authenticated user.")
-    .configureHelp({ formatHelp: () => getHelpText("auth whoami") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const client = await createAuthedClient(allOpts, ctx);
-      const whoami = await client.getWhoAmI();
-      writeSuccess(ctx.stdout, allOpts, whoami, formatWhoAmI(whoami));
-    });
-
-  addCommonOptions(group.command("logout"))
-    .description("Remove stored credentials.")
-    .configureHelp({ formatHelp: () => getHelpText("auth logout") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const currentConfig = await ctx.store.load();
-      const hadToken = Boolean(currentConfig.token);
-
-      if (currentConfig.apiUrl) {
-        await ctx.store.save({ version: 1, apiUrl: currentConfig.apiUrl });
+authCmd
+  .command("whoami")
+  .description("Show current user")
+  .action(async function (this: Command) {
+    const { getToken, getApiUrl } = await import("../config.js");
+    const { apiRequest } = await import("../client.js");
+    const root = this.parent!.parent!;
+    const flags = root.opts();
+    const token = getToken(flags);
+    const apiUrl = getApiUrl(flags);
+    try {
+      const res = await apiRequest<any>("/auth/whoami", { token, apiUrl });
+      if (flags.json) {
+        console.log(JSON.stringify(res, null, 2));
       } else {
-        await ctx.store.clear();
+        console.log(`User: ${res.user?.firstName ?? ""} ${res.user?.lastName ?? ""} (${res.actor?.userId})`);
+        console.log(`Org:  ${res.actor?.orgId}`);
+        console.log(`Auth: ${res.actor?.authType}`);
       }
-
-      const payload = { ok: true, removedToken: hadToken };
-      writeSuccess(ctx.stdout, allOpts, payload, hadToken ? "Logged out." : "No stored token.");
-    });
-}
+    } catch (e) {
+      console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      process.exit(1);
+    }
+  });

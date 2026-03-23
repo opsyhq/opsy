@@ -1,37 +1,14 @@
 {
-  "name": "@opsyhq/opsy",
-  "version": "0.1.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/opsyhq/opsy"
-  },
+  "name": "@opsy/cli",
+  "version": "0.0.1",
   "type": "module",
-  "bin": {
-    "opsy": "./dist/bin.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "bin": { "opsy": "./dist/bin.js" },
   "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test ./src"
+    "build": "bun build src/bin.ts --target=node --format=esm --outdir=dist",
+    "dev": "bun run src/bin.ts"
   },
   "dependencies": {
-    "commander": "^14.0.3",
-    "yaml": "^2.8.2",
-    "zod": "^4.1.5"
-  },
-  "devDependencies": {
     "@opsy/contracts": "workspace:*",
-    "@types/node": "^25.3.0",
-    "tsup": "^8.5.1"
+    "commander": "^13.1.0"
   }
 }

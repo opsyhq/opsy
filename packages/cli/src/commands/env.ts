@@ -1,96 +1,65 @@
-import type { Command } from "commander";
-import type { CommandContext } from "./helpers.js";
-import { getHelpText } from "../help.js";
-import { addCommonOptions, createGroupCommand, write, writeSuccess, createAuthedClient, requireOpt, resolveTextInput } from "./helpers.js";
-import { UsageError } from "../errors.js";
-import { formatEnvConfig, formatEnvList } from "../output.js";
+import { Command } from "commander";
+import { getToken, getApiUrl } from "../config";
+import { apiRequest } from "../client";
+import { formatTable, output } from "../output";
 
-export function registerEnvCommands(parent: Command, ctx: CommandContext) {
-  const group = createGroupCommand(parent, "env", ctx)
-    .description("Manage environments.");
+export const envCmd = new Command("env").description("Manage environments");
 
-  addCommonOptions(group.command("list"))
-    .description("List environments in a workspace.")
-    .option("--workspace <slug>", "Workspace slug")
-    .configureHelp({ formatHelp: () => getHelpText("env list") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const workspace = requireOpt(opts.workspace, "workspace", "env list");
-      const client = await createAuthedClient(allOpts, ctx);
-      const items = await client.listEnvs(workspace);
-      writeSuccess(ctx.stdout, allOpts, items, formatEnvList(items));
-    });
+envCmd
+  .command("list")
+  .description("List environments")
+  .requiredOption("--project <slug>", "Project slug")
+  .action(async function (this: Command, opts: { project: string }) {
+    const flags = this.parent!.parent!.opts();
+    const token = getToken(flags);
+    const apiUrl = getApiUrl(flags);
+    try {
+      const envs = await apiRequest<any[]>(`/projects/${opts.project}/environments`, { token, apiUrl });
+      if (flags.json) return output(envs, flags);
+      if (!envs.length) return console.log("No environments found.");
+      console.log(formatTable(
+        ["SLUG", "AUTO-APPLY", "CREATED"],
+        envs.map((e) => [e.slug, e.autoApply ? "yes" : "no", new Date(e.createdAt).toLocaleDateString()]),
+      ));
+    } catch (e) {
+      console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      process.exit(1);
+    }
+  });
 
-  addCommonOptions(group.command("create"))
-    .description("Create a new environment.")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--slug <slug>", "Environment slug")
-    .configureHelp({ formatHelp: () => getHelpText("env create") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const workspace = requireOpt(opts.workspace, "workspace", "env create");
-      const slug = requireOpt(opts.slug, "slug", "env create");
-      const client = await createAuthedClient(allOpts, ctx);
-      const data = await client.createEnv(workspace, slug);
-      writeSuccess(ctx.stdout, allOpts, data, `Environment created (${data.slug})`, data.slug);
-    });
+envCmd
+  .command("get")
+  .description("Get environment details")
+  .requiredOption("--project <slug>", "Project slug")
+  .requiredOption("--env <slug>", "Environment slug")
+  .action(async function (this: Command, opts: { project: string; env: string }) {
+    const flags = this.parent!.parent!.opts();
+    const token = getToken(flags);
+    const apiUrl = getApiUrl(flags);
+    try {
+      const env = await apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}`, { token, apiUrl });
+      output(env, flags);
+    } catch (e) {
+      console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      process.exit(1);
+    }
+  });
 
-  addCommonOptions(group.command("delete"))
-    .description("Delete an environment.")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .configureHelp({ formatHelp: () => getHelpText("env delete") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const workspace = requireOpt(opts.workspace, "workspace", "env delete");
-      const env = requireOpt(opts.env, "env", "env delete");
-      const client = await createAuthedClient(allOpts, ctx);
-      await client.deleteEnv(workspace, env);
-      writeSuccess(ctx.stdout, allOpts, { ok: true, slug: env }, `Deleted environment ${env}`, env);
-    });
-
-  addCommonOptions(group.command("config-get"))
-    .description("Show environment config.")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .configureHelp({ formatHelp: () => getHelpText("env config-get") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const workspace = requireOpt(opts.workspace, "workspace", "env config-get");
-      const env = requireOpt(opts.env, "env", "env config-get");
-      const client = await createAuthedClient(allOpts, ctx);
-      const data = await client.getEnvConfig(workspace, env);
-      writeSuccess(ctx.stdout, allOpts, data, formatEnvConfig(data));
-    });
-
-  addCommonOptions(group.command("config-set"))
-    .description("Set environment config.")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .option("--config <json>", "Config as JSON string")
-    .option("--file <path>", "Read config from file")
-    .configureHelp({ formatHelp: () => getHelpText("env config-set") + "\n" })
-    .action(async (opts, cmd) => {
-      const allOpts = cmd.optsWithGlobals();
-      const workspace = requireOpt(opts.workspace, "workspace", "env config-set");
-      const env = requireOpt(opts.env, "env", "env config-set");
-
-      const configJson = await resolveTextInput(opts, ctx, {
-        valueFlag: "config",
-        fileFlag: "file",
-        description: "env config JSON",
-        allowEmpty: false,
-      });
-
-      let config: unknown;
-      try {
-        config = JSON.parse(configJson);
-      } catch {
-        throw new UsageError("env config-set requires valid JSON.", { command: "env config-set" });
-      }
-
-      const client = await createAuthedClient(allOpts, ctx);
-      await client.setEnvConfig(workspace, env, config as Parameters<typeof client.setEnvConfig>[2]);
-      writeSuccess(ctx.stdout, allOpts, { ok: true }, `Environment config updated (${env})`, env);
-    });
-}
+envCmd
+  .command("create")
+  .description("Create an environment")
+  .requiredOption("--project <slug>", "Project slug")
+  .requiredOption("--slug <slug>", "Environment slug")
+  .action(async function (this: Command, opts: { project: string; slug: string }) {
+    const flags = this.parent!.parent!.opts();
+    const token = getToken(flags);
+    const apiUrl = getApiUrl(flags);
+    try {
+      const env = await apiRequest<any>(`/projects/${opts.project}/environments`, { method: "POST", body: { slug: opts.slug }, token, apiUrl });
+      if (flags.json) return output(env, flags);
+      console.log(`Environment created: ${env.slug}`);
+    } catch (e) {
+      console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      process.exit(1);
+    }
+  });

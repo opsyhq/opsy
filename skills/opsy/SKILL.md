@@ -1,13 +1,13 @@
 ---
 name: opsy
-description: Use when working with Opsy to manage infrastructure — inspecting stacks, editing drafts, applying runs, or managing org variables. Prefer MCP when available, fall back to CLI otherwise.
+description: Use when working with Opsy to manage infrastructure — inspecting projects/environments/resources, proposing changes, previewing them, and applying executions. Prefer MCP when available, fall back to CLI otherwise.
 ---
 
 # Opsy
 
 ## When to use
 
-Use this skill for tasks involving Opsy workspaces, stacks, environments, drafts, revisions, runs, or org variables.
+Use this skill for tasks involving Opsy projects, environments, resources, changes, executions, discovery, or schema inspection.
 
 ## MCP vs CLI
 
@@ -17,9 +17,10 @@ Use this skill for tasks involving Opsy workspaces, stacks, environments, drafts
 ## Workflow
 
 1. Inspect current state before making changes (don't assume anything)
-2. Use drafts for changes — write or edit, then validate
-3. Apply and check run status — handle approval waits explicitly
-4. Don't retry failed runs blindly — inspect first
+2. Propose explicit resource mutations as changes
+3. Use preview before apply, and review blast radius for delete or downstream effects
+4. Apply the change or direct the user to the change review page when approval is required
+5. Don't retry failed changes blindly — inspect executions and step history first
 
 ## CLI reference
 
