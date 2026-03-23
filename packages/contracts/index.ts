@@ -36,7 +36,7 @@ export const AUTO_APPLY_POLICY_LABELS: Record<AutoApplyPolicy, string> = {
   all: "All changes",
 };
 
-export type BillingPlan = "free" | "startup" | "team" | "enterprise";
+export type BillingPlan = "free" | "starter" | "team" | "enterprise";
 export type BillingSource = "free" | "stripe" | "manual";
 
 export type BillingFeatures = {
