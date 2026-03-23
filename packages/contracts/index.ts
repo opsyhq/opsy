@@ -1,5 +1,7 @@
 export type Paginated<T> = { items: T[]; nextCursor: string | null };
 
+export * from "./observe";
+
 export type DiscoveryProviderId = "aws";
 
 export type DiscoveryProviderSummary = {

@@ -9,6 +9,7 @@ import { schemaCmd } from "./commands/schema";
 import { providerCmd } from "./commands/provider";
 import { feedbackCmd } from "./commands/feedback";
 import { discoverCmd } from "./commands/discover";
+import { observeCmd } from "./commands/observe";
 
 const program = new Command()
   .name("opsy")
@@ -26,6 +27,7 @@ program.addCommand(resourceCmd);
 program.addCommand(changeCmd);
 program.addCommand(schemaCmd);
 program.addCommand(discoverCmd);
+program.addCommand(observeCmd);
 program.addCommand(providerCmd);
 program.addCommand(feedbackCmd);
 

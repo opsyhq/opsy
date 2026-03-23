@@ -70,6 +70,21 @@ opsy discover aws inspect --project <slug> --env <slug> --cloud-id <id> --type <
 opsy discover aws import --project <slug> --env <slug> --items <json>
 ```
 
+## Observe
+
+```bash
+opsy observe
+opsy observe aws logs groups --project <slug> --env <slug> [--profile <profileId>] [--region <region>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
+opsy observe aws logs tail --project <slug> --env <slug> --log-group <name> [--profile <profileId>] [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>]
+opsy observe aws logs events --project <slug> --env <slug> --log-group <name> [--profile <profileId>] [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
+opsy observe aws logs query --project <slug> --env <slug> --log-groups <csv> --query-string <text> [--profile <profileId>] [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--timeout-seconds <n>]
+opsy observe aws metrics list --project <slug> --env <slug> [--profile <profileId>] [--region <region>] [--namespace <name>] [--metric-name <name>] [--dimensions <json-array>] [--recently-active <PT3H>] [--next-token <token>]
+opsy observe aws metrics query --project <slug> --env <slug> --queries <json-array> [--profile <profileId>] [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--scan-by <TimestampDescending|TimestampAscending>] [--max-datapoints <n>]
+opsy observe aws alarms list --project <slug> --env <slug> [--profile <profileId>] [--region <region>] [--state <OK|ALARM|INSUFFICIENT_DATA>] [--type <metric|composite|all>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
+opsy observe aws alarms detail --project <slug> --env <slug> --alarm-name <name> [--profile <profileId>] [--region <region>]
+opsy observe aws alarms history --project <slug> --env <slug> --alarm-name <name> [--profile <profileId>] [--region <region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
+```
+
 ## Provider Profiles
 
 ```bash

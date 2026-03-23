@@ -5,6 +5,34 @@ type RequestOpts = {
   apiUrl: string;
 };
 
+type ApiErrorBody = {
+  isError?: boolean;
+  code?: string;
+  message?: string;
+  retryable?: boolean;
+  details?: unknown;
+};
+
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly retryable: boolean;
+  readonly details?: unknown;
+  readonly body: unknown;
+
+  constructor(status: number, body: unknown) {
+    const payload = (body ?? {}) as ApiErrorBody;
+    super(payload.message ?? `HTTP ${status}`);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = payload.code;
+    this.retryable = payload.retryable ?? false;
+    this.details = payload.details;
+    this.body = body;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export async function apiRequest<T = unknown>(path: string, opts: RequestOpts): Promise<T> {
   const url = `${opts.apiUrl}${path}`;
   const headers: Record<string, string> = {
@@ -19,8 +47,7 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOpts): 
   if (res.status === 204) return undefined as T;
   const json = await res.json();
   if (!res.ok) {
-    const msg = (json as any).message ?? `HTTP ${res.status}`;
-    throw new Error(msg);
+    throw new ApiRequestError(res.status, json);
   }
   return json as T;
 }
