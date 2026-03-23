@@ -36,7 +36,7 @@ export const AUTO_APPLY_POLICY_LABELS: Record<AutoApplyPolicy, string> = {
   all: "All changes",
 };
 
-export type BillingPlan = "free" | "team" | "enterprise";
+export type BillingPlan = "free" | "startup" | "team" | "enterprise";
 export type BillingSource = "free" | "stripe" | "manual";
 
 export type BillingFeatures = {
@@ -79,7 +79,7 @@ export type OrgBillingSummary = {
   };
 };
 
-export type CheckoutSessionResponse = { url: string };
+export type CheckoutSessionResponse = { url: string } | { upgraded: true };
 export type BillingPortalResponse = { url: string };
 
 export type ChangeMutation = {
