@@ -1,0 +1,83 @@
+name: Publish CLI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: public-release-cli
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Resolve package version
+        id: pkg
+        run: |
+          VERSION=$(node -p "require('./packages/cli/package.json').version")
+          NAME=$(node -p "require('./packages/cli/package.json').name")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Releasing $NAME@$VERSION"
+
+      - name: Verify version is not already published
+        run: |
+          PKG="${{ steps.pkg.outputs.name }}"
+          VERSION="${{ steps.pkg.outputs.version }}"
+          CURRENT=$(npm view "$PKG" version 2>/dev/null || true)
+          if [[ "$CURRENT" == "$VERSION" ]]; then
+            echo "$PKG@$VERSION is already published."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify public release snapshot
+        run: |
+          bun run typecheck
+          bun run build
+          bun run test
+          bun run pack:check
+          bun run docs:check
+          bun run smoke
+
+      - name: Publish @opsyhq/opsy
+        run: npm publish
+        working-directory: packages/cli
+
+      - name: Create tag
+        run: |
+          VERSION="${{ steps.pkg.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git rev-parse "v$VERSION" >/dev/null 2>&1 && {
+            echo "Tag v$VERSION already exists."
+            exit 1
+          }
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: v${{ steps.pkg.outputs.version }}
+          generate_release_notes: true
