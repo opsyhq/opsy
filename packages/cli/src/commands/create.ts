@@ -12,19 +12,19 @@ export function createCreateCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     createCmd.command("resource")
       .description("Create one resource and immediately attempt apply")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .requiredOption("--slug <slug>", "Resource slug")
       .requiredOption("--type <type>", "Resource token")
       .requiredOption("--inputs <json>", "Inputs JSON object")
       .option("--parent <slug>", "Parent resource slug")
       .option("--summary <text>", "Change summary")
-      .action(async function (this: Command, opts: { project: string; env: string; slug: string; type: string; inputs: string; parent?: string; summary?: string }) {
+      .action(async function (this: Command, opts: { workspace: string; env: string; slug: string; type: string; inputs: string; parent?: string; summary?: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources`, {
             method: "POST",
             body: {
               slug: opts.slug,
@@ -46,11 +46,11 @@ export function createCreateCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     createCmd.command("change")
       .description("Create a change")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .option("--mutations <json>", "Mutation array")
       .option("--summary <text>", "Change summary")
-      .action(async function (this: Command, opts: { project: string; env: string; mutations?: string; summary?: string }) {
+      .action(async function (this: Command, opts: { workspace: string; env: string; mutations?: string; summary?: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
@@ -58,7 +58,7 @@ export function createCreateCommand(deps: CliDeps = defaultCliDeps) {
           const body: Record<string, unknown> = {};
           if (opts.summary) body.summary = opts.summary;
           if (opts.mutations) body.mutations = parseJson(opts.mutations);
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/changes`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, {
             method: "POST",
             body,
             token,
@@ -72,34 +72,34 @@ export function createCreateCommand(deps: CliDeps = defaultCliDeps) {
   );
 
   addSharedHelp(
-    createCmd.command("project")
-      .description("Create a project")
-      .requiredOption("--slug <slug>", "Project slug")
-      .requiredOption("--name <name>", "Project name")
+    createCmd.command("workspace")
+      .description("Create a workspace")
+      .requiredOption("--slug <slug>", "Workspace slug")
+      .requiredOption("--name <name>", "Workspace name")
       .action(async function (this: Command, opts: { slug: string; name: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>("/projects", { method: "POST", body: opts, token, apiUrl }), flags);
+          output(await deps.apiRequest<any>("/workspaces", { method: "POST", body: opts, token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
       }),
-    ["create", "project"],
+    ["create", "workspace"],
   );
 
   addSharedHelp(
     createCmd.command("env")
       .description("Create an environment")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--slug <slug>", "Environment slug")
-      .action(async function (this: Command, opts: { project: string; slug: string }) {
+      .action(async function (this: Command, opts: { workspace: string; slug: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments`, {
             method: "POST",
             body: { slug: opts.slug },
             token,

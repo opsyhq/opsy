@@ -9,16 +9,16 @@ export function createDeleteCommand(deps: CliDeps = defaultCliDeps) {
     deleteCmd.command("resource")
       .description("Delete one resource and immediately attempt apply")
       .argument("<slug>")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .option("--recursive", "Delete descendants too")
-      .action(async function (this: Command, slug: string, opts: { project: string; env: string; recursive?: boolean }) {
+      .action(async function (this: Command, slug: string, opts: { workspace: string; env: string; recursive?: boolean }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
           const query = opts.recursive ? "?recursive=true" : "";
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}${query}`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}${query}`, {
             method: "DELETE",
             token,
             apiUrl,

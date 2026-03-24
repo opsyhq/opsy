@@ -8,15 +8,15 @@ export function createRestoreCommand(deps: CliDeps = defaultCliDeps) {
     restoreCmd.command("resource")
       .description("Restore one resource from an operation snapshot")
       .argument("<slug>")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .requiredOption("--operation <id>", "Operation id")
-      .action(async function (this: Command, slug: string, opts: { project: string; env: string; operation: string }) {
+      .action(async function (this: Command, slug: string, opts: { workspace: string; env: string; operation: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/restore`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/restore`, {
             method: "POST",
             body: { operationId: opts.operation },
             token,

@@ -9,19 +9,19 @@ export function createUpdateCommand(deps: CliDeps = defaultCliDeps) {
     updateCmd.command("resource")
       .description("Update one resource and immediately attempt apply")
       .argument("<slug>")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .requiredOption("--inputs <json>", "Inputs JSON object")
       .option("--summary <text>", "Change summary")
       .option("--remove-input-paths <json>", "JSON array of input paths to remove")
       .option("--parent <slug>", "New parent slug")
       .option("--version <n>", "Optimistic-lock version")
-      .action(async function (this: Command, slug: string, opts: { project: string; env: string; inputs: string; summary?: string; removeInputPaths?: string; parent?: string; version?: string }) {
+      .action(async function (this: Command, slug: string, opts: { workspace: string; env: string; inputs: string; summary?: string; removeInputPaths?: string; parent?: string; version?: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, {
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, {
             method: "PUT",
             body: {
               inputs: JSON.parse(opts.inputs),

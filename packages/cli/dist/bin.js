@@ -2243,87 +2243,87 @@ var OBSERVE_AWS_HELP_CATALOG = {
   commands: [
     {
       path: ["logs", "groups"],
-      synopsis: "observe aws logs groups --project <project> --env <env> [--profile <profileId>] [--region <aws-region>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]",
+      synopsis: "observe aws logs groups --workspace <workspace> --env <env> [--profile <profileId>] [--region <aws-region>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]",
       purpose: "List CloudWatch log groups.",
       examples: [
-        "observe aws logs groups --project acme --env prod",
-        "observe aws logs groups --project acme --env prod --name-prefix /aws/lambda/"
+        "observe aws logs groups --workspace acme --env prod",
+        "observe aws logs groups --workspace acme --env prod --name-prefix /aws/lambda/"
       ]
     },
     {
       path: ["logs", "tail"],
-      synopsis: "observe aws logs tail --project <project> --env <env> --log-group <name> [--profile <profileId>] [--region <aws-region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>]",
+      synopsis: "observe aws logs tail --workspace <workspace> --env <env> --log-group <name> [--profile <profileId>] [--region <aws-region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>]",
       purpose: "Fetch a bounded one-shot view of recent log events, newest first.",
       examples: [
-        "observe aws logs tail --project acme --env prod --log-group /aws/lambda/payments",
-        "observe aws logs tail --project acme --env prod --log-group /aws/ecs/app --since 1h --filter-pattern ERROR"
+        "observe aws logs tail --workspace acme --env prod --log-group /aws/lambda/payments",
+        "observe aws logs tail --workspace acme --env prod --log-group /aws/ecs/app --since 1h --filter-pattern ERROR"
       ],
       notes: ["Default --since is 15m."]
     },
     {
       path: ["logs", "events"],
-      synopsis: "observe aws logs events --project <project> --env <env> --log-group <name> [--profile <profileId>] [--region <aws-region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]",
+      synopsis: "observe aws logs events --workspace <workspace> --env <env> --log-group <name> [--profile <profileId>] [--region <aws-region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]",
       purpose: "Retrieve filtered log events in chronological order.",
       examples: [
-        "observe aws logs events --project acme --env prod --log-group /aws/lambda/payments --since 30m",
-        "observe aws logs events --project acme --env prod --log-group /aws/ecs/app --log-stream ecs/app/123"
+        "observe aws logs events --workspace acme --env prod --log-group /aws/lambda/payments --since 30m",
+        "observe aws logs events --workspace acme --env prod --log-group /aws/ecs/app --log-stream ecs/app/123"
       ]
     },
     {
       path: ["logs", "query"],
-      synopsis: "observe aws logs query --project <project> --env <env> --log-groups <csv> --query-string <text> [--profile <profileId>] [--region <aws-region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--timeout-seconds <n>]",
+      synopsis: "observe aws logs query --workspace <workspace> --env <env> --log-groups <csv> --query-string <text> [--profile <profileId>] [--region <aws-region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--timeout-seconds <n>]",
       purpose: "Run a CloudWatch Logs Insights query and poll until completion.",
       examples: [
-        "observe aws logs query --project acme --env prod --log-groups /aws/lambda/payments --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 20'",
-        "observe aws logs query --project acme --env prod --log-groups /aws/lambda/a,/aws/lambda/b --since 2h --query-string 'stats count() by bin(5m)'"
+        "observe aws logs query --workspace acme --env prod --log-groups /aws/lambda/payments --query-string 'fields @timestamp, @message | sort @timestamp desc | limit 20'",
+        "observe aws logs query --workspace acme --env prod --log-groups /aws/lambda/a,/aws/lambda/b --since 2h --query-string 'stats count() by bin(5m)'"
       ],
       notes: ["Default --since is 1h. Default --timeout-seconds is 15."]
     },
     {
       path: ["metrics", "list"],
-      synopsis: "observe aws metrics list --project <project> --env <env> [--profile <profileId>] [--region <aws-region>] [--namespace <name>] [--metric-name <name>] [--dimensions <json-array>] [--recently-active <PT3H>] [--next-token <token>]",
+      synopsis: "observe aws metrics list --workspace <workspace> --env <env> [--profile <profileId>] [--region <aws-region>] [--namespace <name>] [--metric-name <name>] [--dimensions <json-array>] [--recently-active <PT3H>] [--next-token <token>]",
       purpose: "List CloudWatch metric descriptors and dimension sets.",
       examples: [
-        "observe aws metrics list --project acme --env prod --namespace AWS/Lambda",
-        "observe aws metrics list --project acme --env prod --namespace AWS/EC2 --metric-name CPUUtilization"
+        "observe aws metrics list --workspace acme --env prod --namespace AWS/Lambda",
+        "observe aws metrics list --workspace acme --env prod --namespace AWS/EC2 --metric-name CPUUtilization"
       ]
     },
     {
       path: ["metrics", "query"],
-      synopsis: "observe aws metrics query --project <project> --env <env> --queries <json-array> [--profile <profileId>] [--region <aws-region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--scan-by <TimestampDescending|TimestampAscending>] [--max-datapoints <n>]",
+      synopsis: "observe aws metrics query --workspace <workspace> --env <env> --queries <json-array> [--profile <profileId>] [--region <aws-region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--scan-by <TimestampDescending|TimestampAscending>] [--max-datapoints <n>]",
       purpose: "Run CloudWatch GetMetricData queries and return raw datapoints.",
       examples: [
-        `observe aws metrics query --project acme --env prod --queries '[{"Id":"cpu","MetricStat":{"Metric":{"Namespace":"AWS/EC2","MetricName":"CPUUtilization","Dimensions":[{"Name":"InstanceId","Value":"i-123"}]},"Period":300,"Stat":"Average"}}]'`,
-        `observe aws metrics query --project acme --env prod --queries '[{"Id":"errors","Expression":"SUM(METRICS())"}]' --since 6h`
+        `observe aws metrics query --workspace acme --env prod --queries '[{"Id":"cpu","MetricStat":{"Metric":{"Namespace":"AWS/EC2","MetricName":"CPUUtilization","Dimensions":[{"Name":"InstanceId","Value":"i-123"}]},"Period":300,"Stat":"Average"}}]'`,
+        `observe aws metrics query --workspace acme --env prod --queries '[{"Id":"errors","Expression":"SUM(METRICS())"}]' --since 6h`
       ],
       notes: ["Default --since is 1h. Default --until is now."]
     },
     {
       path: ["alarms", "list"],
-      synopsis: "observe aws alarms list --project <project> --env <env> [--profile <profileId>] [--region <aws-region>] [--state <OK|ALARM|INSUFFICIENT_DATA>] [--type <metric|composite|all>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]",
+      synopsis: "observe aws alarms list --workspace <workspace> --env <env> [--profile <profileId>] [--region <aws-region>] [--state <OK|ALARM|INSUFFICIENT_DATA>] [--type <metric|composite|all>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]",
       purpose: "List CloudWatch metric and composite alarms.",
       examples: [
-        "observe aws alarms list --project acme --env prod",
-        "observe aws alarms list --project acme --env prod --state ALARM --type metric"
+        "observe aws alarms list --workspace acme --env prod",
+        "observe aws alarms list --workspace acme --env prod --state ALARM --type metric"
       ],
       notes: ["Default --type is all."]
     },
     {
       path: ["alarms", "detail"],
-      synopsis: "observe aws alarms detail --project <project> --env <env> --alarm-name <name> [--profile <profileId>] [--region <aws-region>]",
+      synopsis: "observe aws alarms detail --workspace <workspace> --env <env> --alarm-name <name> [--profile <profileId>] [--region <aws-region>]",
       purpose: "Fetch the full current config and state for one alarm.",
       examples: [
-        "observe aws alarms detail --project acme --env prod --alarm-name HighCPU",
-        "observe aws alarms detail --project acme --env prod --alarm-name CompositeLatencyAlarm"
+        "observe aws alarms detail --workspace acme --env prod --alarm-name HighCPU",
+        "observe aws alarms detail --workspace acme --env prod --alarm-name CompositeLatencyAlarm"
       ]
     },
     {
       path: ["alarms", "history"],
-      synopsis: "observe aws alarms history --project <project> --env <env> --alarm-name <name> [--profile <profileId>] [--region <aws-region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]",
+      synopsis: "observe aws alarms history --workspace <workspace> --env <env> --alarm-name <name> [--profile <profileId>] [--region <aws-region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]",
       purpose: "List CloudWatch alarm history entries.",
       examples: [
-        "observe aws alarms history --project acme --env prod --alarm-name HighCPU",
-        "observe aws alarms history --project acme --env prod --alarm-name HighCPU --history-item-type StateUpdate --since 7d"
+        "observe aws alarms history --workspace acme --env prod --alarm-name HighCPU",
+        "observe aws alarms history --workspace acme --env prod --alarm-name HighCPU --history-item-type StateUpdate --since 7d"
       ],
       notes: ["Default --since is 24h."]
     }
@@ -2406,24 +2406,24 @@ var OPSY_COMMAND_SPECS = [
   {
     id: "list.resources",
     path: ["list", "resources"],
-    usage: "opsy list resources --project <project> --env <env> [--parent <slug>] [--detailed]",
+    usage: "opsy list resources --workspace <workspace> --env <env> [--parent <slug>] [--detailed]",
     summary: "List resources in an environment.",
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "parent", value: "<slug>", description: "Filter to children of one resource." }, { name: "detailed", description: "Include full resource records instead of summary rows." })
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "parent", value: "<slug>", description: "Filter to children of one resource." }, { name: "detailed", description: "Include full resource records instead of summary rows." })
   },
   {
     id: "list.changes",
     path: ["list", "changes"],
-    usage: "opsy list changes --project <project> --env <env>",
+    usage: "opsy list changes --workspace <workspace> --env <env>",
     summary: "List recent changes.",
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." })
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." })
   },
-  { id: "list.projects", path: ["list", "projects"], usage: "opsy list projects", summary: "List projects." },
+  { id: "list.workspaces", path: ["list", "workspaces"], usage: "opsy list workspaces", summary: "List workspaces." },
   {
     id: "list.envs",
     path: ["list", "envs"],
-    usage: "opsy list envs --project <project>",
-    summary: "List environments for a project.",
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." })
+    usage: "opsy list envs --workspace <workspace>",
+    summary: "List environments for a workspace.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." })
   },
   { id: "list.providers", path: ["list", "providers"], usage: "opsy list providers", summary: "List provider profiles." },
   {
@@ -2436,18 +2436,18 @@ var OPSY_COMMAND_SPECS = [
   {
     id: "get.resource",
     path: ["get", "resource"],
-    usage: "opsy get resource <slug> --project <project> --env <env> [--live]",
+    usage: "opsy get resource <slug> --workspace <workspace> --env <env> [--live]",
     summary: "Get one resource.",
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "live", description: "Include live cloud state comparison." })
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "live", description: "Include live cloud state comparison." })
   },
   { id: "get.change", path: ["get", "change"], usage: "opsy get change <shortId>", summary: "Get one change with operations." },
-  { id: "get.project", path: ["get", "project"], usage: "opsy get project <slug>", summary: "Get one project." },
+  { id: "get.workspace", path: ["get", "workspace"], usage: "opsy get workspace <slug>", summary: "Get one workspace." },
   {
     id: "get.env",
     path: ["get", "env"],
-    usage: "opsy get env <slug> --project <project>",
+    usage: "opsy get env <slug> --workspace <workspace>",
     summary: "Get one environment.",
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." })
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." })
   },
   { id: "get.provider", path: ["get", "provider"], usage: "opsy get provider <id>", summary: "Get one provider profile." },
   {
@@ -2459,29 +2459,29 @@ var OPSY_COMMAND_SPECS = [
   {
     id: "create.resource",
     path: ["create", "resource"],
-    usage: "opsy create resource --project <project> --env <env> --slug <slug> --type <type> --inputs <json> [--parent <slug>]",
+    usage: "opsy create resource --workspace <workspace> --env <env> --slug <slug> --type <type> --inputs <json> [--parent <slug>]",
     summary: "Create one resource by proposing one mutation and immediately attempting apply.",
     examples: [
-      `opsy create resource --project acme --env prod --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'`
+      `opsy create resource --workspace acme --env prod --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'`
     ],
-    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "slug", value: "<slug>", required: true, description: "Resource slug." }, { name: "type", value: "<type>", required: true, description: "Resource token." }, { name: "inputs", value: "<json>", required: true, description: "Resource inputs JSON object." }, { name: "parent", value: "<slug>", description: "Optional parent resource slug." })
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "slug", value: "<slug>", required: true, description: "Resource slug." }, { name: "type", value: "<type>", required: true, description: "Resource token." }, { name: "inputs", value: "<json>", required: true, description: "Resource inputs JSON object." }, { name: "parent", value: "<slug>", description: "Optional parent resource slug." })
   },
   {
     id: "create.change",
     path: ["create", "change"],
-    usage: "opsy create change --project <project> --env <env> [--mutations <json>] [--summary <text>]",
+    usage: "opsy create change --workspace <workspace> --env <env> [--mutations <json>] [--summary <text>]",
     summary: "Create a change, optionally with mutations."
   },
   {
-    id: "create.project",
-    path: ["create", "project"],
-    usage: "opsy create project --slug <slug> --name <name>",
-    summary: "Create a project."
+    id: "create.workspace",
+    path: ["create", "workspace"],
+    usage: "opsy create workspace --slug <slug> --name <name>",
+    summary: "Create a workspace."
   },
   {
     id: "create.env",
     path: ["create", "env"],
-    usage: "opsy create env --project <project> --slug <slug>",
+    usage: "opsy create env --workspace <workspace> --slug <slug>",
     summary: "Create an environment."
   },
   {
@@ -2493,13 +2493,13 @@ var OPSY_COMMAND_SPECS = [
   {
     id: "update.resource",
     path: ["update", "resource"],
-    usage: "opsy update resource <slug> --project <project> --env <env> --inputs <json>",
+    usage: "opsy update resource <slug> --workspace <workspace> --env <env> --inputs <json>",
     summary: "Update one resource by proposing one mutation and immediately attempting apply."
   },
   {
     id: "delete.resource",
     path: ["delete", "resource"],
-    usage: "opsy delete resource <slug> --project <project> --env <env> [--recursive]",
+    usage: "opsy delete resource <slug> --workspace <workspace> --env <env> [--recursive]",
     summary: "Delete one resource by proposing one mutation and immediately attempting apply."
   },
   { id: "apply.change", path: ["apply", "change"], usage: "opsy apply change <shortId>", summary: "Apply a change." },
@@ -2515,115 +2515,115 @@ var OPSY_COMMAND_SPECS = [
   {
     id: "refresh.resource",
     path: ["refresh", "resource"],
-    usage: "opsy refresh resource <slug> --project <project> --env <env>",
+    usage: "opsy refresh resource <slug> --workspace <workspace> --env <env>",
     summary: "Refresh a resource from cloud and recompute conflict state."
   },
   {
     id: "diff.resource",
     path: ["diff", "resource"],
-    usage: "opsy diff resource <slug> --project <project> --env <env>",
+    usage: "opsy diff resource <slug> --workspace <workspace> --env <env>",
     summary: "Compare stored and live resource state."
   },
   {
     id: "accept.resource",
     path: ["accept", "resource"],
-    usage: "opsy accept resource <slug> --project <project> --env <env>",
+    usage: "opsy accept resource <slug> --workspace <workspace> --env <env>",
     summary: "Accept recorded live state into desired inputs."
   },
   {
     id: "push.resource",
     path: ["push", "resource"],
-    usage: "opsy push resource <slug> --project <project> --env <env>",
+    usage: "opsy push resource <slug> --workspace <workspace> --env <env>",
     summary: "Promote desired state back to cloud through a change."
   },
   {
     id: "restore.resource",
     path: ["restore", "resource"],
-    usage: "opsy restore resource <slug> --project <project> --env <env> --operation <operationId>",
+    usage: "opsy restore resource <slug> --workspace <workspace> --env <env> --operation <operationId>",
     summary: "Restore a resource to the state captured before an operation."
   },
   {
     id: "history.resource",
     path: ["history", "resource"],
-    usage: "opsy history resource <slug> --project <project> --env <env>",
+    usage: "opsy history resource <slug> --workspace <workspace> --env <env>",
     summary: "List operation history for one resource."
   },
   {
     id: "discover.aws.types",
     path: ["discover", "aws", "types"],
-    usage: "opsy discover aws types --project <project> --env <env> [--query <text>]",
+    usage: "opsy discover aws types --workspace <workspace> --env <env> [--query <text>]",
     summary: "List AWS discovery types."
   },
   {
     id: "discover.aws.list",
     path: ["discover", "aws", "list"],
-    usage: "opsy discover aws list --project <project> --env <env> [--type <type>] [--region <region>]",
+    usage: "opsy discover aws list --workspace <workspace> --env <env> [--type <type>] [--region <region>]",
     summary: "List existing AWS resources."
   },
   {
     id: "discover.aws.inspect",
     path: ["discover", "aws", "inspect"],
-    usage: "opsy discover aws inspect --project <project> --env <env> --cloud-id <id> --type <type>",
+    usage: "opsy discover aws inspect --workspace <workspace> --env <env> --cloud-id <id> --type <type>",
     summary: "Inspect one AWS resource."
   },
   {
     id: "discover.aws.import",
     path: ["discover", "aws", "import"],
-    usage: "opsy discover aws import --project <project> --env <env> --items <json>",
+    usage: "opsy discover aws import --workspace <workspace> --env <env> --items <json>",
     summary: "Import existing AWS resources into a change."
   },
   {
     id: "observe.aws.logs.tail",
     path: ["observe", "aws", "logs", "tail"],
-    usage: "opsy observe aws logs tail --project <project> --env <env> --log-group <name> [...]",
+    usage: "opsy observe aws logs tail --workspace <workspace> --env <env> --log-group <name> [...]",
     summary: "Tail CloudWatch log events."
   },
   {
     id: "observe.aws.logs.events",
     path: ["observe", "aws", "logs", "events"],
-    usage: "opsy observe aws logs events --project <project> --env <env> --log-group <name> [...]",
+    usage: "opsy observe aws logs events --workspace <workspace> --env <env> --log-group <name> [...]",
     summary: "List CloudWatch log events."
   },
   {
     id: "observe.aws.logs.groups",
     path: ["observe", "aws", "logs", "groups"],
-    usage: "opsy observe aws logs groups --project <project> --env <env> [...]",
+    usage: "opsy observe aws logs groups --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch log groups."
   },
   {
     id: "observe.aws.logs.query",
     path: ["observe", "aws", "logs", "query"],
-    usage: "opsy observe aws logs query --project <project> --env <env> --log-groups <csv> --query-string <query> [...]",
+    usage: "opsy observe aws logs query --workspace <workspace> --env <env> --log-groups <csv> --query-string <query> [...]",
     summary: "Run a CloudWatch Logs Insights query."
   },
   {
     id: "observe.aws.metrics.list",
     path: ["observe", "aws", "metrics", "list"],
-    usage: "opsy observe aws metrics list --project <project> --env <env> [...]",
+    usage: "opsy observe aws metrics list --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch metrics."
   },
   {
     id: "observe.aws.metrics.query",
     path: ["observe", "aws", "metrics", "query"],
-    usage: "opsy observe aws metrics query --project <project> --env <env> --queries <json> [...]",
+    usage: "opsy observe aws metrics query --workspace <workspace> --env <env> --queries <json> [...]",
     summary: "Run CloudWatch metric queries."
   },
   {
     id: "observe.aws.alarms.list",
     path: ["observe", "aws", "alarms", "list"],
-    usage: "opsy observe aws alarms list --project <project> --env <env> [...]",
+    usage: "opsy observe aws alarms list --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch alarms."
   },
   {
     id: "observe.aws.alarms.detail",
     path: ["observe", "aws", "alarms", "detail"],
-    usage: "opsy observe aws alarms detail --project <project> --env <env> --alarm-name <name>",
+    usage: "opsy observe aws alarms detail --workspace <workspace> --env <env> --alarm-name <name>",
     summary: "Get one CloudWatch alarm."
   },
   {
     id: "observe.aws.alarms.history",
     path: ["observe", "aws", "alarms", "history"],
-    usage: "opsy observe aws alarms history --project <project> --env <env> --alarm-name <name> [...]",
+    usage: "opsy observe aws alarms history --workspace <workspace> --env <env> --alarm-name <name> [...]",
     summary: "List CloudWatch alarm history."
   },
   {
@@ -2637,9 +2637,9 @@ var TOP_LEVEL_HELP = [
   "Opsy command surface",
   "",
   "Core verbs:",
-  "  list      List resources, changes, projects, environments, providers, or schemas",
-  "  get       Fetch one resource, change, project, environment, provider, or schema",
-  "  create    Create a resource/change/project/environment/provider",
+  "  list      List resources, changes, workspaces, environments, providers, or schemas",
+  "  get       Fetch one resource, change, workspace, environment, provider, or schema",
+  "  create    Create a resource/change/workspace/environment/provider",
   "  update    Update a resource",
   "  delete    Delete a resource",
   "  apply     Apply a change",
@@ -2835,11 +2835,11 @@ function output(data, flags2) {
 // src/commands/list.ts
 function createListCommand(deps = defaultCliDeps) {
   const listCmd = new Command("list").description("List resources and other nouns");
-  addSharedHelp(listCmd.command("resources").description("List resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
+  addSharedHelp(listCmd.command("resources").description("List resources").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
     try {
       const resources = await deps.apiRequest(path, { token, apiUrl });
       if (flags2.json || opts.detailed)
@@ -2851,12 +2851,12 @@ function createListCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["list", "resources"]);
-  addSharedHelp(listCmd.command("changes").description("List changes").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
+  addSharedHelp(listCmd.command("changes").description("List changes").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const changes = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, { token, apiUrl });
+      const changes = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, { token, apiUrl });
       if (flags2.json)
         return output(changes, flags2);
       if (!changes.length)
@@ -2866,27 +2866,27 @@ function createListCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["list", "changes"]);
-  addSharedHelp(listCmd.command("projects").description("List projects").action(async function() {
+  addSharedHelp(listCmd.command("workspaces").description("List workspaces").action(async function() {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const projects = await deps.apiRequest("/projects", { token, apiUrl });
+      const workspaces = await deps.apiRequest("/workspaces", { token, apiUrl });
       if (flags2.json)
-        return output(projects, flags2);
-      if (!projects.length)
-        return deps.log("No projects found.");
-      deps.log(formatTable(["SLUG", "NAME", "CREATED"], projects.map((project) => [project.slug, project.name, new Date(project.createdAt).toLocaleDateString()])));
+        return output(workspaces, flags2);
+      if (!workspaces.length)
+        return deps.log("No workspaces found.");
+      deps.log(formatTable(["SLUG", "NAME", "CREATED"], workspaces.map((workspace) => [workspace.slug, workspace.name, new Date(workspace.createdAt).toLocaleDateString()])));
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["list", "projects"]);
-  addSharedHelp(listCmd.command("envs").description("List environments").requiredOption("--project <slug>", "Project slug").action(async function(opts) {
+  }), ["list", "workspaces"]);
+  addSharedHelp(listCmd.command("envs").description("List environments").requiredOption("--workspace <slug>", "Workspace slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const envs = await deps.apiRequest(`/projects/${opts.project}/environments`, { token, apiUrl });
+      const envs = await deps.apiRequest(`/workspaces/${opts.workspace}/environments`, { token, apiUrl });
       if (flags2.json)
         return output(envs, flags2);
       if (!envs.length)
@@ -2933,15 +2933,15 @@ var listCmd = createListCommand();
 // src/commands/get.ts
 function createGetCommand(deps = defaultCliDeps) {
   const getCmd = new Command("get").description("Get one resource and other nouns");
-  addSharedHelp(getCmd.command("resource").description("Get one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--live", "Include live resource comparison").action(async function(slug, opts) {
+  addSharedHelp(getCmd.command("resource").description("Get one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--live", "Include live resource comparison").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
       if (!opts.live) {
-        return output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags2);
+        return output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags2);
       }
-      return output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags2);
+      return output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -2956,22 +2956,22 @@ function createGetCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["get", "change"]);
-  addSharedHelp(getCmd.command("project").description("Get one project").argument("<slug>").action(async function(slug) {
+  addSharedHelp(getCmd.command("workspace").description("Get one workspace").argument("<slug>").action(async function(slug) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${slug}`, { token, apiUrl }), flags2);
+      output(await deps.apiRequest(`/workspaces/${slug}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["get", "project"]);
-  addSharedHelp(getCmd.command("env").description("Get one environment").argument("<slug>").requiredOption("--project <slug>", "Project slug").action(async function(slug, opts) {
+  }), ["get", "workspace"]);
+  addSharedHelp(getCmd.command("env").description("Get one environment").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${slug}`, { token, apiUrl }), flags2);
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${slug}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -3006,12 +3006,12 @@ function parseJson(value) {
 }
 function createCreateCommand(deps = defaultCliDeps) {
   const createCmd = new Command("create").description("Create resources and other nouns");
-  addSharedHelp(createCmd.command("resource").description("Create one resource and immediately attempt apply").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--slug <slug>", "Resource slug").requiredOption("--type <type>", "Resource token").requiredOption("--inputs <json>", "Inputs JSON object").option("--parent <slug>", "Parent resource slug").option("--summary <text>", "Change summary").action(async function(opts) {
+  addSharedHelp(createCmd.command("resource").description("Create one resource and immediately attempt apply").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--slug <slug>", "Resource slug").requiredOption("--type <type>", "Resource token").requiredOption("--inputs <json>", "Inputs JSON object").option("--parent <slug>", "Parent resource slug").option("--summary <text>", "Change summary").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources`, {
         method: "POST",
         body: {
           slug: opts.slug,
@@ -3027,7 +3027,7 @@ function createCreateCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["create", "resource"]);
-  addSharedHelp(createCmd.command("change").description("Create a change").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary").action(async function(opts) {
+  addSharedHelp(createCmd.command("change").description("Create a change").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3037,7 +3037,7 @@ function createCreateCommand(deps = defaultCliDeps) {
         body.summary = opts.summary;
       if (opts.mutations)
         body.mutations = parseJson(opts.mutations);
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, {
         method: "POST",
         body,
         token,
@@ -3047,22 +3047,22 @@ function createCreateCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["create", "change"]);
-  addSharedHelp(createCmd.command("project").description("Create a project").requiredOption("--slug <slug>", "Project slug").requiredOption("--name <name>", "Project name").action(async function(opts) {
+  addSharedHelp(createCmd.command("workspace").description("Create a workspace").requiredOption("--slug <slug>", "Workspace slug").requiredOption("--name <name>", "Workspace name").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest("/projects", { method: "POST", body: opts, token, apiUrl }), flags2);
+      output(await deps.apiRequest("/workspaces", { method: "POST", body: opts, token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["create", "project"]);
-  addSharedHelp(createCmd.command("env").description("Create an environment").requiredOption("--project <slug>", "Project slug").requiredOption("--slug <slug>", "Environment slug").action(async function(opts) {
+  }), ["create", "workspace"]);
+  addSharedHelp(createCmd.command("env").description("Create an environment").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--slug <slug>", "Environment slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments`, {
         method: "POST",
         body: { slug: opts.slug },
         token,
@@ -3094,12 +3094,12 @@ var createCmd = createCreateCommand();
 // src/commands/update.ts
 function createUpdateCommand(deps = defaultCliDeps) {
   const updateCmd = new Command("update").description("Update resources");
-  addSharedHelp(updateCmd.command("resource").description("Update one resource and immediately attempt apply").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--inputs <json>", "Inputs JSON object").option("--summary <text>", "Change summary").option("--remove-input-paths <json>", "JSON array of input paths to remove").option("--parent <slug>", "New parent slug").option("--version <n>", "Optimistic-lock version").action(async function(slug, opts) {
+  addSharedHelp(updateCmd.command("resource").description("Update one resource and immediately attempt apply").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--inputs <json>", "Inputs JSON object").option("--summary <text>", "Change summary").option("--remove-input-paths <json>", "JSON array of input paths to remove").option("--parent <slug>", "New parent slug").option("--version <n>", "Optimistic-lock version").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, {
         method: "PUT",
         body: {
           inputs: JSON.parse(opts.inputs),
@@ -3122,13 +3122,13 @@ var updateCmd = createUpdateCommand();
 // src/commands/delete.ts
 function createDeleteCommand(deps = defaultCliDeps) {
   const deleteCmd = new Command("delete").description("Delete resources");
-  addSharedHelp(deleteCmd.command("resource").description("Delete one resource and immediately attempt apply").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--recursive", "Delete descendants too").action(async function(slug, opts) {
+  addSharedHelp(deleteCmd.command("resource").description("Delete one resource and immediately attempt apply").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--recursive", "Delete descendants too").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
       const query = opts.recursive ? "?recursive=true" : "";
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}${query}`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}${query}`, {
         method: "DELETE",
         token,
         apiUrl
@@ -3242,12 +3242,12 @@ var retryCmd = createRetryCommand();
 // src/commands/refresh.ts
 function createRefreshCommand(deps = defaultCliDeps) {
   const refreshCmd = new Command("refresh").description("Refresh live resource state");
-  addSharedHelp(refreshCmd.command("resource").description("Refresh one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(refreshCmd.command("resource").description("Refresh one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/sync`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/sync`, {
         method: "POST",
         token,
         apiUrl
@@ -3263,12 +3263,12 @@ var refreshCmd = createRefreshCommand();
 // src/commands/diff.ts
 function createDiffCommand(deps = defaultCliDeps) {
   const diffCmd = new Command("diff").description("Diff stored and live resource state");
-  addSharedHelp(diffCmd.command("resource").description("Diff one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(diffCmd.command("resource").description("Diff one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/diff`, { token, apiUrl }), flags2);
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/diff`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -3280,12 +3280,12 @@ var diffCmd = createDiffCommand();
 // src/commands/accept.ts
 function createAcceptCommand(deps = defaultCliDeps) {
   const acceptCmd = new Command("accept").description("Accept recorded live state");
-  addSharedHelp(acceptCmd.command("resource").description("Accept live state for one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(acceptCmd.command("resource").description("Accept live state for one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/accept-live`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/accept-live`, {
         method: "POST",
         token,
         apiUrl
@@ -3301,12 +3301,12 @@ var acceptCmd = createAcceptCommand();
 // src/commands/push.ts
 function createPushCommand(deps = defaultCliDeps) {
   const pushCmd = new Command("push").description("Push desired resource state through a change");
-  addSharedHelp(pushCmd.command("resource").description("Push one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(pushCmd.command("resource").description("Push one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/promote-current`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/promote-current`, {
         method: "POST",
         token,
         apiUrl
@@ -3322,12 +3322,12 @@ var pushCmd = createPushCommand();
 // src/commands/restore.ts
 function createRestoreCommand(deps = defaultCliDeps) {
   const restoreCmd = new Command("restore").description("Restore resource state");
-  addSharedHelp(restoreCmd.command("resource").description("Restore one resource from an operation snapshot").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--operation <id>", "Operation id").action(async function(slug, opts) {
+  addSharedHelp(restoreCmd.command("resource").description("Restore one resource from an operation snapshot").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--operation <id>", "Operation id").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/restore`, {
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/restore`, {
         method: "POST",
         body: { operationId: opts.operation },
         token,
@@ -3344,12 +3344,12 @@ var restoreCmd = createRestoreCommand();
 // src/commands/history.ts
 function createHistoryCommand(deps = defaultCliDeps) {
   const historyCmd = new Command("history").description("List resource history");
-  addSharedHelp(historyCmd.command("resource").description("List history for one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(historyCmd.command("resource").description("List history for one resource").argument("<slug>").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/history`, { token, apiUrl }), flags2);
+      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/history`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -3441,11 +3441,11 @@ function createDiscoverCommand(deps = defaultDeps) {
   awsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  awsCmd.command("types").description("List AWS resource types that support discovery").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
+  awsCmd.command("types").description("List AWS resource types that support discovery").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/types${buildQuery({ query: opts.query })}`;
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/types${buildQuery({ query: opts.query })}`;
     try {
       const types = await deps.apiRequest(path, { token, apiUrl });
       if (flags2.json)
@@ -3459,11 +3459,11 @@ function createDiscoverCommand(deps = defaultDeps) {
       handleCliError2(error, deps);
     }
   });
-  awsCmd.command("list").description("List existing AWS resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--type <reType>", "Filter by AWS Resource Explorer type").option("--region <region>", "Filter by AWS region").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
+  awsCmd.command("list").description("List existing AWS resources").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--type <reType>", "Filter by AWS Resource Explorer type").option("--region <region>", "Filter by AWS region").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws${buildQuery({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws${buildQuery({
       type: opts.type,
       region: opts.region,
       profileId: opts.profile
@@ -3481,11 +3481,11 @@ function createDiscoverCommand(deps = defaultDeps) {
       handleCliError2(error, deps);
     }
   });
-  awsCmd.command("inspect").description("Inspect a single AWS resource").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--cloud-id <id>", "AWS cloud ID").requiredOption("--type <type>", "Pulumi token or AWS Resource Explorer type").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
+  awsCmd.command("inspect").description("Inspect a single AWS resource").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--cloud-id <id>", "AWS cloud ID").requiredOption("--type <type>", "Pulumi token or AWS Resource Explorer type").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/inspect${buildQuery({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/inspect${buildQuery({
       cloudId: opts.cloudId,
       type: opts.type,
       profileId: opts.profile
@@ -3497,13 +3497,13 @@ function createDiscoverCommand(deps = defaultDeps) {
       handleCliError2(error, deps);
     }
   });
-  awsCmd.command("import").description("Import discovered AWS resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--items <json>", "JSON array of {cloudId, type, slug}").action(async function(opts) {
+  awsCmd.command("import").description("Import discovered AWS resources").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--items <json>", "JSON array of {cloudId, type, slug}").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
       const items = JSON.parse(opts.items);
-      const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/discover/aws/import`, { method: "POST", body: { items }, token, apiUrl });
+      const result = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/import`, { method: "POST", body: { items }, token, apiUrl });
       if (flags2.json)
         return output(result, flags2);
       deps.log(`Change ${result.change.shortId} created with ${result.operations.length} AWS import operation(s).`);
@@ -3618,11 +3618,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   logsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const groupsCmd = new Command("groups").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const groupsCmd = new Command("groups").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/groups${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/logs/groups${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       namePrefix: opts.namePrefix,
@@ -3649,11 +3649,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(groupsCmd, ["logs", "groups"]);
   logsCmd.addCommand(groupsCmd);
-  const tailCmd = new Command("tail").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
+  const tailCmd = new Command("tail").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/tail${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/logs/tail${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       logGroup: opts.logGroup,
@@ -3674,11 +3674,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(tailCmd, ["logs", "tail"]);
   logsCmd.addCommand(tailCmd);
-  const eventsCmd = new Command("events").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const eventsCmd = new Command("events").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/events${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/logs/events${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       logGroup: opts.logGroup,
@@ -3700,12 +3700,12 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(eventsCmd, ["logs", "events"]);
   logsCmd.addCommand(eventsCmd);
-  const queryCmd = new Command("query").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
+  const queryCmd = new Command("query").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const data = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/query`, {
+      const data = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/logs/query`, {
         method: "POST",
         body: {
           profileId: opts.profile,
@@ -3739,14 +3739,14 @@ ${getObserveProviderHelpMessage("aws")}`);
   metricsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const metricsListCmd = new Command("list").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const metricsListCmd = new Command("list").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
       if (opts.dimensions)
         parseJsonArray(opts.dimensions, "--dimensions");
-      const data = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/observe/aws/metrics${buildQuery2({
+      const data = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/metrics${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         namespace: opts.namespace,
@@ -3772,13 +3772,13 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(metricsListCmd, ["metrics", "list"]);
   metricsCmd.addCommand(metricsListCmd);
-  const metricsQueryCmd = new Command("query").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
+  const metricsQueryCmd = new Command("query").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
       const queries = parseJsonArray(opts.queries, "--queries");
-      const data = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/observe/aws/metrics/query`, {
+      const data = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/metrics/query`, {
         method: "POST",
         body: {
           profileId: opts.profile,
@@ -3811,11 +3811,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   alarmsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const alarmsListCmd = new Command("list").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const alarmsListCmd = new Command("list").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/alarms${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       state: opts.state,
@@ -3844,11 +3844,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(alarmsListCmd, ["alarms", "list"]);
   alarmsCmd.addCommand(alarmsListCmd);
-  const alarmsDetailCmd = new Command("detail").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
+  const alarmsDetailCmd = new Command("detail").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms/detail${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/alarms/detail${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       alarmName: opts.alarmName
@@ -3862,11 +3862,11 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(alarmsDetailCmd, ["alarms", "detail"]);
   alarmsCmd.addCommand(alarmsDetailCmd);
-  const alarmsHistoryCmd = new Command("history").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const alarmsHistoryCmd = new Command("history").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
-    const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms/history${buildQuery2({
+    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/observe/aws/alarms/history${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
       alarmName: opts.alarmName,

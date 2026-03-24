@@ -68,12 +68,12 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observe", "aws", "logs", "groups", "--project", "acme", "--env", "prod", "--name-prefix", "/aws/lambda/"],
+      ["node", "opsy", "observe", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod", "--name-prefix", "/aws/lambda/"],
       { from: "node" },
     );
 
     expect(paths).toEqual([
-      "/projects/acme/environments/prod/observe/aws/logs/groups?namePrefix=%2Faws%2Flambda%2F",
+      "/workspaces/acme/environments/prod/observe/aws/logs/groups?namePrefix=%2Faws%2Flambda%2F",
     ]);
   });
 
@@ -94,12 +94,12 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observe", "aws", "metrics", "query", "--project", "acme", "--env", "prod", "--queries", "[{\"Id\":\"cpu\"}]"],
+      ["node", "opsy", "observe", "aws", "metrics", "query", "--workspace", "acme", "--env", "prod", "--queries", "[{\"Id\":\"cpu\"}]"],
       { from: "node" },
     );
 
     expect(calls).toEqual([{
-      path: "/projects/acme/environments/prod/observe/aws/metrics/query",
+      path: "/workspaces/acme/environments/prod/observe/aws/metrics/query",
       body: {
         profileId: undefined,
         region: undefined,
@@ -130,7 +130,7 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "--json", "observe", "aws", "logs", "groups", "--project", "acme", "--env", "prod"],
+      ["node", "opsy", "--json", "observe", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod"],
       { from: "node" },
     );
 
@@ -183,7 +183,7 @@ describe("observe CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "observe", "aws", "logs", "query", "--project", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "observe", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 
@@ -222,7 +222,7 @@ describe("observe CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "--json", "observe", "aws", "logs", "query", "--project", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "--json", "observe", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 

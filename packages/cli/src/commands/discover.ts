@@ -80,14 +80,14 @@ export function createDiscoverCommand(deps: DiscoverDeps = defaultDeps) {
   awsCmd
     .command("types")
     .description("List AWS resource types that support discovery")
-    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--query <text>", "Filter by resource type")
-    .action(async function (this: Command, opts: { project: string; env: string; query?: string }) {
+    .action(async function (this: Command, opts: { workspace: string; env: string; query?: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/types${buildQuery({ query: opts.query })}`;
+      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/types${buildQuery({ query: opts.query })}`;
 
       try {
         const types = await deps.apiRequest<Array<{ reType: string; pulumiType: string }>>(path, { token, apiUrl });
@@ -108,16 +108,16 @@ export function createDiscoverCommand(deps: DiscoverDeps = defaultDeps) {
   awsCmd
     .command("list")
     .description("List existing AWS resources")
-    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--type <reType>", "Filter by AWS Resource Explorer type")
     .option("--region <region>", "Filter by AWS region")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
-    .action(async function (this: Command, opts: { project: string; env: string; type?: string; region?: string; profile?: string }) {
+    .action(async function (this: Command, opts: { workspace: string; env: string; type?: string; region?: string; profile?: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws${buildQuery({
+      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws${buildQuery({
         type: opts.type,
         region: opts.region,
         profileId: opts.profile,
@@ -142,16 +142,16 @@ export function createDiscoverCommand(deps: DiscoverDeps = defaultDeps) {
   awsCmd
     .command("inspect")
     .description("Inspect a single AWS resource")
-    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--cloud-id <id>", "AWS cloud ID")
     .requiredOption("--type <type>", "Pulumi token or AWS Resource Explorer type")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
-    .action(async function (this: Command, opts: { project: string; env: string; cloudId: string; type: string; profile?: string }) {
+    .action(async function (this: Command, opts: { workspace: string; env: string; cloudId: string; type: string; profile?: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/inspect${buildQuery({
+      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/inspect${buildQuery({
         cloudId: opts.cloudId,
         type: opts.type,
         profileId: opts.profile,
@@ -168,10 +168,10 @@ export function createDiscoverCommand(deps: DiscoverDeps = defaultDeps) {
   awsCmd
     .command("import")
     .description("Import discovered AWS resources")
-    .requiredOption("--project <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--items <json>", "JSON array of {cloudId, type, slug}")
-    .action(async function (this: Command, opts: { project: string; env: string; items: string }) {
+    .action(async function (this: Command, opts: { workspace: string; env: string; items: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
@@ -179,7 +179,7 @@ export function createDiscoverCommand(deps: DiscoverDeps = defaultDeps) {
       try {
         const items = JSON.parse(opts.items);
         const result = await deps.apiRequest<any>(
-          `/projects/${opts.project}/environments/${opts.env}/discover/aws/import`,
+          `/workspaces/${opts.workspace}/environments/${opts.env}/discover/aws/import`,
           { method: "POST", body: { items }, token, apiUrl },
         );
         if (flags.json) return output(result, flags);

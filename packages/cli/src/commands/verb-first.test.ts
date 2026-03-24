@@ -46,11 +46,11 @@ describe("verb-first CLI surface", () => {
     })]);
 
     await program.parseAsync(
-      ["node", "opsy", "list", "resources", "--project", "acme", "--env", "prod"],
+      ["node", "opsy", "list", "resources", "--workspace", "acme", "--env", "prod"],
       { from: "node" },
     );
 
-    expect(requests).toEqual([{ path: "/projects/acme/environments/prod/resources", method: undefined }]);
+    expect(requests).toEqual([{ path: "/workspaces/acme/environments/prod/resources", method: undefined }]);
   });
 
   test("get provider uses the new provider endpoint", async () => {

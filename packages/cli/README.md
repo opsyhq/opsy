@@ -1,6 +1,6 @@
 # Opsy CLI
 
-Opsy is an agent-friendly infrastructure control plane. This package installs the `opsy` CLI for managing projects, environments, resources, changes, discovery, and observe workflows against the Opsy API.
+Opsy is an agent-friendly infrastructure control plane. This package installs the `opsy` CLI for managing workspaces, environments, resources, changes, discovery, and observe workflows against the Opsy API.
 
 The public GitHub repo mirrors the shipped CLI source for inspection and verification. Releases are published from Opsy's private source-of-truth monorepo.
 
@@ -14,18 +14,18 @@ npm install -g @opsyhq/opsy
 
 ```bash
 opsy auth login --token <pat>
-opsy list projects
-opsy list envs --project <slug>
-opsy list resources --project <slug> --env <slug>
+opsy list workspaces
+opsy list envs --workspace <slug>
+opsy list resources --workspace <slug> --env <slug>
 ```
 
 ## Commands
 
 ```text
 auth      Authentication
-list      List resources, changes, projects, environments, providers, and schemas
-get       Fetch one resource, change, project, environment, provider, or schema
-create    Create resources, changes, projects, environments, and providers
+list      List resources, changes, workspaces, environments, providers, and schemas
+get       Fetch one resource, change, workspace, environment, provider, or schema
+create    Create resources, changes, workspaces, environments, and providers
 update    Update resources
 delete    Delete resources
 apply     Apply a change

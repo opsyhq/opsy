@@ -9,18 +9,18 @@ export function createGetCommand(deps: CliDeps = defaultCliDeps) {
     getCmd.command("resource")
       .description("Get one resource")
       .argument("<slug>")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .option("--live", "Include live resource comparison")
-      .action(async function (this: Command, slug: string, opts: { project: string; env: string; live?: boolean }) {
+      .action(async function (this: Command, slug: string, opts: { workspace: string; env: string; live?: boolean }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
           if (!opts.live) {
-            return output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags);
+            return output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags);
           }
-          return output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags);
+          return output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -46,33 +46,33 @@ export function createGetCommand(deps: CliDeps = defaultCliDeps) {
   );
 
   addSharedHelp(
-    getCmd.command("project")
-      .description("Get one project")
+    getCmd.command("workspace")
+      .description("Get one workspace")
       .argument("<slug>")
       .action(async function (this: Command, slug: string) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${slug}`, { token, apiUrl }), flags);
+          output(await deps.apiRequest<any>(`/workspaces/${slug}`, { token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
       }),
-    ["get", "project"],
+    ["get", "workspace"],
   );
 
   addSharedHelp(
     getCmd.command("env")
       .description("Get one environment")
       .argument("<slug>")
-      .requiredOption("--project <slug>", "Project slug")
-      .action(async function (this: Command, slug: string, opts: { project: string }) {
+      .requiredOption("--workspace <slug>", "Workspace slug")
+      .action(async function (this: Command, slug: string, opts: { workspace: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/projects/${opts.project}/environments/${slug}`, { token, apiUrl }), flags);
+          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${slug}`, { token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }

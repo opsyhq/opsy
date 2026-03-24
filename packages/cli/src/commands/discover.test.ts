@@ -66,11 +66,11 @@ describe("discover CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "discover", "aws", "types", "--project", "acme", "--env", "prod", "--query", "s3"],
+      ["node", "opsy", "discover", "aws", "types", "--workspace", "acme", "--env", "prod", "--query", "s3"],
       { from: "node" },
     );
 
-    expect(paths).toEqual(["/projects/acme/environments/prod/discover/aws/types?query=s3"]);
+    expect(paths).toEqual(["/workspaces/acme/environments/prod/discover/aws/types?query=s3"]);
   });
 
   test("unsupported providers fail with manual-import guidance", async () => {

@@ -8,15 +8,15 @@ export function createListCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     listCmd.command("resources")
       .description("List resources")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
       .option("--parent <slug>", "Parent resource slug")
       .option("--detailed", "Return full resource detail objects")
-      .action(async function (this: Command, opts: { project: string; env: string; parent?: string; detailed?: boolean }) {
+      .action(async function (this: Command, opts: { workspace: string; env: string; parent?: string; detailed?: boolean }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
-        const path = `/projects/${opts.project}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
+        const path = `/workspaces/${opts.workspace}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
         try {
           const resources = await deps.apiRequest<any[]>(path, { token, apiUrl });
           if (flags.json || opts.detailed) return output(resources, flags);
@@ -35,14 +35,14 @@ export function createListCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     listCmd.command("changes")
       .description("List changes")
-      .requiredOption("--project <slug>", "Project slug")
+      .requiredOption("--workspace <slug>", "Workspace slug")
       .requiredOption("--env <slug>", "Environment slug")
-      .action(async function (this: Command, opts: { project: string; env: string }) {
+      .action(async function (this: Command, opts: { workspace: string; env: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          const changes = await deps.apiRequest<any[]>(`/projects/${opts.project}/environments/${opts.env}/changes`, { token, apiUrl });
+          const changes = await deps.apiRequest<any[]>(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, { token, apiUrl });
           if (flags.json) return output(changes, flags);
           if (!changes.length) return deps.log("No changes found.");
           deps.log(formatTable(
@@ -57,37 +57,37 @@ export function createListCommand(deps: CliDeps = defaultCliDeps) {
   );
 
   addSharedHelp(
-    listCmd.command("projects")
-      .description("List projects")
+    listCmd.command("workspaces")
+      .description("List workspaces")
       .action(async function (this: Command) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          const projects = await deps.apiRequest<any[]>("/projects", { token, apiUrl });
-          if (flags.json) return output(projects, flags);
-          if (!projects.length) return deps.log("No projects found.");
+          const workspaces = await deps.apiRequest<any[]>("/workspaces", { token, apiUrl });
+          if (flags.json) return output(workspaces, flags);
+          if (!workspaces.length) return deps.log("No workspaces found.");
           deps.log(formatTable(
             ["SLUG", "NAME", "CREATED"],
-            projects.map((project) => [project.slug, project.name, new Date(project.createdAt).toLocaleDateString()]),
+            workspaces.map((workspace) => [workspace.slug, workspace.name, new Date(workspace.createdAt).toLocaleDateString()]),
           ));
         } catch (error) {
           handleCliError(error, deps);
         }
       }),
-    ["list", "projects"],
+    ["list", "workspaces"],
   );
 
   addSharedHelp(
     listCmd.command("envs")
       .description("List environments")
-      .requiredOption("--project <slug>", "Project slug")
-      .action(async function (this: Command, opts: { project: string }) {
+      .requiredOption("--workspace <slug>", "Workspace slug")
+      .action(async function (this: Command, opts: { workspace: string }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          const envs = await deps.apiRequest<any[]>(`/projects/${opts.project}/environments`, { token, apiUrl });
+          const envs = await deps.apiRequest<any[]>(`/workspaces/${opts.workspace}/environments`, { token, apiUrl });
           if (flags.json) return output(envs, flags);
           if (!envs.length) return deps.log("No environments found.");
           deps.log(formatTable(

@@ -52,7 +52,7 @@ export type BillingFeatures = {
 
 export type BillingLimits = {
   users: number | null;
-  projects: number | null;
+  workspaces: number | null;
   resources: number | null;
 };
 
@@ -60,7 +60,7 @@ export type BillingUsage = {
   activeUsers: number;
   pendingInvites: number;
   seatsCounted: number;
-  projects: number;
+  workspaces: number;
   resources: number;
 };
 
@@ -76,7 +76,7 @@ export type OrgBillingSummary = {
   features: BillingFeatures;
   blocked: {
     addUser: boolean;
-    createProject: boolean;
+    createWorkspace: boolean;
   };
 };
 
@@ -214,8 +214,11 @@ export type ExecutionRecord = {
   changeId: string | null;
   envId: string;
   mode: "preview" | "apply" | "refresh" | "import";
-  status: "pending" | "running" | "succeeded" | "failed" | "partially_failed" | "cancelled";
+  status: "pending" | "running" | "succeeded" | "failed" | "cancelled";
   targetSlugs: string[];
+  leaseExpiresAt?: string | null;
+  cancelRequestedAt?: string | null;
+  cancelReason?: string | null;
   subgraphSummary?: unknown;
   previewSummary?: unknown;
   errorSummary?: unknown;
@@ -237,11 +240,15 @@ export type ChangeRecord = {
   shortId: string;
   envId: string;
   summary: string | null;
-  status: string;
+  status: "open" | "previewed" | "applying" | "partially_applied" | "applied" | "failed" | "dismissed";
   createdAt: string;
   updatedAt?: string;
   request?: ChangeRequestRecord | null;
   targetSlugs?: string[] | null;
+  appliedTargets?: string[];
+  remainingTargets?: string[];
+  activeExecutionId?: string | null;
+  activeTargetSlugs?: string[];
   previewSummary?: unknown;
   derivedFromChangeId?: string | null;
   derivationKind?: string | null;
@@ -297,8 +304,8 @@ export type ResourceRecord = {
 };
 
 export type ProviderUsageBinding = {
-  projectSlug: string;
-  projectName: string;
+  workspaceSlug: string;
+  workspaceName: string;
   envSlug: string;
   boundAt: string;
 };
@@ -311,8 +318,8 @@ export type ProviderUsageSummary = {
 
 export type OnboardingState = {
   hasOrg: boolean;
-  hasProject: boolean;
-  projectCount: number;
+  hasWorkspace: boolean;
+  workspaceCount: number;
   hasProviderProfile?: boolean;
   orgProviderProfilesCount?: number;
   providerProfilesCount: number;
@@ -440,7 +447,7 @@ export const feedbackRoutes = {
 } as const;
 
 export type RealtimeEvent = {
-  project: string;
+  workspace: string;
   entity: string;
   env?: string;
   slug?: string;
