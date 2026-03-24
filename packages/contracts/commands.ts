@@ -345,10 +345,15 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     ),
     examples: [
       'opsy change create --workspace acme --env prod --summary "Create base network"',
-      `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create VPC"`,
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"network","type":"group"},{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","parent":"network","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create grouped network"`,
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"update","slug":"subnet-a","parent":"vpc-b","inputs":{}}]' --summary "Move subnet under new parent"`,
     ],
     whenToUse: [
       "Use this when you want a reviewable draft before applying mutations, especially when the work spans multiple resources.",
+    ],
+    notes: [
+      'In mutation JSON, use `"parent":"<slug>"` to organize resources under another resource.',
+      'If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.',
     ],
     nextSteps: [
       "Run `opsy change append <shortId> --mutations <json>` to add more work.",
@@ -367,9 +372,13 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     ),
     examples: [
       `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"vpc","inputs":{"enableDnsHostnames":true}}]'`,
+      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"subnet-a","parent":"network","inputs":{}}]'`,
     ],
     whenToUse: [
       "Use this after `change create` when you are building up a staged change in multiple steps.",
+    ],
+    notes: [
+      'Mutation JSON uses `"parent":"<slug>"` for reparenting.',
     ],
     nextSteps: [
       "Run `opsy change preview <shortId>` to inspect the updated draft.",
@@ -635,6 +644,11 @@ const TOP_LEVEL_HELP = [
   "  Use `opsy change create` for reviewable drafts and multi-step work.",
   "  Use `opsy resource create`, `opsy resource update`, or `opsy resource delete` for one-off mutations that should auto-apply when policy allows.",
   "",
+  "Organizing resources:",
+  "  Use `--parent <slug>` on `resource create` and `resource update` to place a resource under another resource.",
+  '  In change mutation JSON, use `"parent":"<slug>"`.',
+  '  If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.',
+  "",
   "More help:",
   "  `opsy <noun> --help`",
   "  `opsy <noun> <action> --help`",
@@ -804,6 +818,7 @@ export function renderServerInstructions(): string {
     "Opsy manages infrastructure through workspaces, environments, resources, and changes.",
     'Use the single `opsy` tool and start with `opsy --help`.',
     'Then follow the same zero-start flow as the CLI: `opsy workspace list`, `opsy environment list --workspace <slug>`, `opsy resource list --workspace <slug> --env <slug>`, `opsy resource get <slug> --workspace <slug> --env <slug>`, then `opsy change create ...` or `opsy resource create ...`.',
+    'Use `--parent <slug>` on one-off resource mutations to organize resources. In change mutation JSON, use `"parent":"<slug>"`. Create `type:"group"` first when you need a virtual container.',
     "MCP authentication is handled by the client session, not by `opsy auth login`.",
     'Use `opsy <noun> <action> --help` whenever you need command-specific usage.',
   ].join("\n");
@@ -814,6 +829,7 @@ export function renderToolDescription(): string {
     "Opsy operator tool. Mirrors the CLI grammar.",
     "Use `opsy --help` and `opsy <noun> <action> --help`.",
     "Workflow: workspace -> environment -> resource -> change.",
+    'Use `--parent <slug>` to organize resources; in mutation JSON use `"parent":"<slug>"`. Create `type:"group"` when you need a virtual container.',
     "MCP auth comes from the session, not `opsy auth login`.",
   ].join(" ");
 }

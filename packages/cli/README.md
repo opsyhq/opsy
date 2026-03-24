@@ -22,6 +22,8 @@ opsy resource get <resource-slug> --workspace <workspace-slug> --env <env-slug>
 
 `resource list` returns root resources first. Add `--parent <slug>` to walk down the tree.
 
+Use `--parent <slug>` on `resource create` and `resource update` to organize resources under another resource. In change mutation JSON, use `"parent":"<slug>"`. If you want a folder-like container with no cloud object, create a virtual `group` resource first and then parent resources under it.
+
 ## Mutation Paths
 
 Use a draft change when the work should be reviewable or span multiple mutations:
@@ -33,12 +35,25 @@ opsy change preview <shortId>
 opsy change apply <shortId>
 ```
 
+Example with a virtual group and explicit parenting:
+
+```bash
+opsy change create --workspace <workspace-slug> --env <env-slug> --summary "Create grouped network" \
+  --mutations '[{"kind":"create","slug":"network","type":"group"},{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","parent":"network","inputs":{"cidrBlock":"10.0.0.0/16"}}]'
+```
+
 Use one-off resource mutations when you want a single mutation and immediate apply if policy allows:
 
 ```bash
 opsy resource create --workspace <workspace-slug> --env <env-slug> --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'
 opsy resource update <resource-slug> --workspace <workspace-slug> --env <env-slug> --inputs '{"key":"value"}'
 opsy resource delete <resource-slug> --workspace <workspace-slug> --env <env-slug>
+```
+
+For reparenting, use:
+
+```bash
+opsy resource update <resource-slug> --workspace <workspace-slug> --env <env-slug> --parent <new-parent-slug> --inputs '{}'
 ```
 
 ## Help

@@ -93,7 +93,7 @@ export type ChangeMutation = {
   sensitiveInputPaths?: string[];
   cloudId?: string;
   importId?: string;
-  parentSlug?: string | null;
+  parent?: string | null;
   recursive?: boolean;
   force?: boolean;
   version?: number;

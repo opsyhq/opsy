@@ -2636,10 +2636,15 @@ var OPSY_COMMAND_SPECS = [
     flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "mutations", value: "<json>", description: "JSON array of mutations to seed the draft." }, { name: "summary", value: "<text>", description: "Optional human summary for the change." }),
     examples: [
       'opsy change create --workspace acme --env prod --summary "Create base network"',
-      `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create VPC"`
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"network","type":"group"},{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","parent":"network","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create grouped network"`,
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"update","slug":"subnet-a","parent":"vpc-b","inputs":{}}]' --summary "Move subnet under new parent"`
     ],
     whenToUse: [
       "Use this when you want a reviewable draft before applying mutations, especially when the work spans multiple resources."
+    ],
+    notes: [
+      'In mutation JSON, use `"parent":"<slug>"` to organize resources under another resource.',
+      'If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.'
     ],
     nextSteps: [
       "Run `opsy change append <shortId> --mutations <json>` to add more work.",
@@ -2654,10 +2659,14 @@ var OPSY_COMMAND_SPECS = [
     summary: "Append mutations to an existing open change.",
     flags: flags({ name: "mutations", value: "<json>", required: true, description: "JSON array of mutations to append." }, { name: "summary", value: "<text>", description: "Optional summary override." }),
     examples: [
-      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"vpc","inputs":{"enableDnsHostnames":true}}]'`
+      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"vpc","inputs":{"enableDnsHostnames":true}}]'`,
+      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"subnet-a","parent":"network","inputs":{}}]'`
     ],
     whenToUse: [
       "Use this after `change create` when you are building up a staged change in multiple steps."
+    ],
+    notes: [
+      'Mutation JSON uses `"parent":"<slug>"` for reparenting.'
     ],
     nextSteps: [
       "Run `opsy change preview <shortId>` to inspect the updated draft.",
@@ -2915,6 +2924,11 @@ var TOP_LEVEL_HELP = [
   "Mutation paths:",
   "  Use `opsy change create` for reviewable drafts and multi-step work.",
   "  Use `opsy resource create`, `opsy resource update`, or `opsy resource delete` for one-off mutations that should auto-apply when policy allows.",
+  "",
+  "Organizing resources:",
+  "  Use `--parent <slug>` on `resource create` and `resource update` to place a resource under another resource.",
+  '  In change mutation JSON, use `"parent":"<slug>"`.',
+  '  If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.',
   "",
   "More help:",
   "  `opsy <noun> --help`",
@@ -3432,7 +3446,7 @@ function createResourceCommand(deps = defaultCliDeps) {
           slug: resourceSlug,
           type,
           inputs,
-          parentSlug: opts.parent,
+          parent: opts.parent,
           summary: opts.summary
         },
         token,
@@ -3457,7 +3471,7 @@ function createResourceCommand(deps = defaultCliDeps) {
           inputs,
           summary: opts.summary,
           removeInputPaths: opts.removeInputPaths ? parseJsonFlag(opts.removeInputPaths, "remove-input-paths") : undefined,
-          parentSlug: opts.parent,
+          parent: opts.parent,
           version: opts.version ? Number(opts.version) : undefined
         },
         token,

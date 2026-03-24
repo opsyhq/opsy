@@ -46,6 +46,7 @@ describe("noun-first CLI surface", () => {
     expect(help).toContain("2. `opsy workspace list`");
     expect(help).toContain("resource list --workspace <slug> --env <slug>` returns root resources first");
     expect(help).toContain("Use `opsy change create` for reviewable drafts");
+    expect(help).toContain("Use `--parent <slug>` on `resource create` and `resource update`");
     expect(help).toContain("workspace");
   });
 

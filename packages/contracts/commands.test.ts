@@ -15,6 +15,8 @@ describe("noun-first command contracts", () => {
     expect(help).toContain("2. `opsy workspace list`");
     expect(help).toContain("`opsy resource list --workspace <slug> --env <slug>` returns root resources first.");
     expect(help).toContain("Mutation paths:");
+    expect(help).toContain("Use `--parent <slug>` on `resource create` and `resource update`");
+    expect(help).toContain('create a virtual resource with `type:"group"`');
     expect(help).toContain("Nouns:");
     expect(help).toContain("workspace");
   });
@@ -24,6 +26,8 @@ describe("noun-first command contracts", () => {
     expect(renderCommandHelp(["resource", "accept-live"])).toContain("opsy resource accept-live");
     expect(renderCommandHelp(["workspace", "list"])).toContain("What to do next:");
     expect(renderCommandHelp(["change", "create"])).toContain("Run `opsy change append <shortId> --mutations <json>`");
+    expect(renderCommandHelp(["change", "create"])).toContain('"parent":"<slug>"');
+    expect(renderCommandHelp(["change", "append"])).toContain('"parent":"<slug>"');
     expect(renderCommandHelp(["discovery", "aws"])).toContain("Subcommands:");
     expect(renderCommandHelp(["observability", "aws"])).toContain("observability aws logs groups");
   });
@@ -49,10 +53,14 @@ describe("noun-first command contracts", () => {
 
     expect(instructions).toContain("Use the single `opsy` tool");
     expect(instructions).toContain("opsy workspace list");
+    expect(instructions).toContain("Use `--parent <slug>`");
+    expect(instructions).toContain('Create `type:"group"` first');
     expect(instructions).toContain("MCP authentication is handled by the client session");
 
     expect(description).toContain("Mirrors the CLI grammar");
     expect(description).toContain("Workflow: workspace -> environment -> resource -> change.");
+    expect(description).toContain("Use `--parent <slug>` to organize resources");
+    expect(description).toContain('Create `type:"group"`');
     expect(description).toContain("MCP auth comes from the session");
   });
 });
