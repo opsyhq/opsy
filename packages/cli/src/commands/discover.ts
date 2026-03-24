@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { DISCOVERY_PROVIDERS, getUnsupportedDiscoveryProviderMessage } from "@opsy/contracts";
+import { DISCOVERY_PROVIDERS, getUnsupportedDiscoveryProviderMessage } from "../catalog";
 import { getToken, getApiUrl } from "../config";
 import { apiRequest } from "../client";
 import { formatTable, output } from "../output";

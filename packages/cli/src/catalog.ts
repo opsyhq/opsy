@@ -1,17 +1,19 @@
-export type ObserveProviderId = "aws";
+export type DiscoveryProviderId = "aws";
 
-export type ObserveProviderSummary = {
-  id: ObserveProviderId;
+export type DiscoveryProviderSummary = {
+  id: DiscoveryProviderId;
   label: string;
 };
 
-export const OBSERVE_PROVIDERS: ObserveProviderSummary[] = [
+export const DISCOVERY_PROVIDERS: DiscoveryProviderSummary[] = [
   { id: "aws", label: "AWS" },
 ];
 
-export function getUnsupportedObserveProviderMessage(provider: string): string {
-  return `Observe is not implemented for "${provider}". Use "observe" to list supported providers.`;
+export function getUnsupportedDiscoveryProviderMessage(provider: string): string {
+  return `Discovery is not implemented for "${provider}". Use manual import.`;
 }
+
+export type ObserveProviderId = "aws";
 
 export type ObserveCommandHelpEntry = {
   path: string[];
@@ -21,7 +23,7 @@ export type ObserveCommandHelpEntry = {
   notes?: string[];
 };
 
-export type ObserveProviderHelpCatalog = {
+type ObserveProviderHelpCatalog = {
   provider: ObserveProviderId;
   title: string;
   intro: string;
@@ -34,7 +36,7 @@ const OBSERVE_TIME_NOTES = [
   "JSON-typed options use raw AWS-like JSON arrays for --dimensions and --queries.",
 ];
 
-export const OBSERVE_AWS_HELP_CATALOG: ObserveProviderHelpCatalog = {
+const OBSERVE_AWS_HELP_CATALOG: ObserveProviderHelpCatalog = {
   provider: "aws",
   title: "AWS CloudWatch observe commands",
   intro: "Read-only CloudWatch logs, metrics, and alarms for an environment or explicit AWS profile.",
@@ -129,9 +131,13 @@ export const OBSERVE_AWS_HELP_CATALOG: ObserveProviderHelpCatalog = {
   ],
 };
 
-export function getObserveProviderHelpCatalog(provider: string): ObserveProviderHelpCatalog | null {
+function getObserveProviderHelpCatalog(provider: string): ObserveProviderHelpCatalog | null {
   if (provider === "aws") return OBSERVE_AWS_HELP_CATALOG;
   return null;
+}
+
+export function getUnsupportedObserveProviderMessage(provider: string): string {
+  return `Observe is not implemented for "${provider}". Use "observe" to list supported providers.`;
 }
 
 export function findObserveCommandHelp(
@@ -143,7 +149,7 @@ export function findObserveCommandHelp(
 }
 
 export function renderObserveSupportedProviders(): string {
-  return `Supported observe providers:\n${OBSERVE_PROVIDERS.map((provider) => `  ${provider.id}`).join("\n")}`;
+  return "Supported observe providers:\n  aws";
 }
 
 export function renderObserveProviderHelp(provider: string): string {
@@ -160,171 +166,3 @@ export function renderObserveProviderHelp(provider: string): string {
 
   return `${catalog.title}\n  ${catalog.intro}\n\nNotes:\n${catalog.notes.map((note) => `  - ${note}`).join("\n")}\n\n${sections.join("\n\n")}`;
 }
-
-export type ObserveTimeWindow = {
-  startTime: string;
-  endTime: string;
-};
-
-export type ObserveAwsLogGroup = {
-  name: string;
-  arn: string | null;
-  creationTime: string | null;
-  retentionInDays: number | null;
-  storedBytes: number | null;
-  metricFilterCount: number | null;
-  logGroupClass: string | null;
-};
-
-export type ObserveAwsLogGroupsResponse = {
-  provider: "aws";
-  region: string;
-  namePrefix: string | null;
-  items: ObserveAwsLogGroup[];
-  nextToken: string | null;
-};
-
-export type ObserveAwsLogEvent = {
-  eventId: string | null;
-  timestamp: string;
-  ingestionTime: string | null;
-  logStreamName: string | null;
-  message: string;
-};
-
-export type ObserveAwsLogEventsResponse = {
-  provider: "aws";
-  region: string;
-  logGroup: string;
-  logStream: string | null;
-  filterPattern: string | null;
-  timeWindow: ObserveTimeWindow;
-  events: ObserveAwsLogEvent[];
-  nextToken: string | null;
-};
-
-export type ObserveAwsLogTailResponse = ObserveAwsLogEventsResponse & {
-  summary: {
-    count: number;
-    newestEventTime: string | null;
-    oldestEventTime: string | null;
-  };
-};
-
-export type ObserveAwsLogQueryRow = Record<string, string | null>;
-
-export type ObserveAwsLogQueryStatistics = {
-  recordsMatched: number | null;
-  recordsScanned: number | null;
-  estimatedRecordsSkipped: number | null;
-  bytesScanned: number | null;
-  estimatedBytesSkipped: number | null;
-  logGroupsScanned: number | null;
-};
-
-export type ObserveAwsLogsQueryResponse = {
-  provider: "aws";
-  region: string;
-  queryId: string;
-  status: string;
-  logGroups: string[];
-  timeWindow: ObserveTimeWindow;
-  rows: ObserveAwsLogQueryRow[];
-  statistics: ObserveAwsLogQueryStatistics;
-};
-
-export type ObserveAwsMetricDimension = {
-  name: string;
-  value: string | null;
-};
-
-export type ObserveAwsMetricDescriptor = {
-  namespace: string;
-  metricName: string;
-  dimensions: ObserveAwsMetricDimension[];
-};
-
-export type ObserveAwsMetricsListResponse = {
-  provider: "aws";
-  region: string;
-  items: ObserveAwsMetricDescriptor[];
-  nextToken: string | null;
-};
-
-export type ObserveAwsMetricMessage = {
-  code: string | null;
-  value: string;
-};
-
-export type ObserveAwsMetricSeries = {
-  id: string;
-  label: string | null;
-  statusCode: string | null;
-  timestamps: string[];
-  values: number[];
-  messages: ObserveAwsMetricMessage[];
-};
-
-export type ObserveAwsMetricsQueryResponse = {
-  provider: "aws";
-  region: string;
-  timeWindow: ObserveTimeWindow;
-  results: ObserveAwsMetricSeries[];
-  messages: ObserveAwsMetricMessage[];
-  nextToken: string | null;
-};
-
-export type ObserveAwsAlarmType = "metric" | "composite";
-
-export type ObserveAwsAlarmSummary = {
-  name: string;
-  arn: string | null;
-  type: ObserveAwsAlarmType;
-  stateValue: string;
-  stateReason: string | null;
-  stateUpdatedAt: string | null;
-  description: string | null;
-  actionsEnabled: boolean;
-  namespace: string | null;
-  metricName: string | null;
-};
-
-export type ObserveAwsAlarmsListResponse = {
-  provider: "aws";
-  region: string;
-  items: ObserveAwsAlarmSummary[];
-  nextToken: string | null;
-};
-
-export type ObserveAwsAlarmDetail = ObserveAwsAlarmSummary & {
-  configuration: Record<string, unknown>;
-  stateReasonData: string | null;
-  okActions: string[];
-  alarmActions: string[];
-  insufficientDataActions: string[];
-  dimensions: ObserveAwsMetricDimension[];
-  metrics: unknown[];
-  alarmRule: string | null;
-};
-
-export type ObserveAwsAlarmDetailResponse = {
-  provider: "aws";
-  region: string;
-  alarm: ObserveAwsAlarmDetail;
-};
-
-export type ObserveAwsAlarmHistoryEntry = {
-  timestamp: string;
-  type: string;
-  summary: string | null;
-  data: string | null;
-};
-
-export type ObserveAwsAlarmHistoryResponse = {
-  provider: "aws";
-  region: string;
-  alarmName: string;
-  timeWindow: ObserveTimeWindow;
-  items: ObserveAwsAlarmHistoryEntry[];
-  nextToken: string | null;
-};

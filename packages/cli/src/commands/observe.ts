@@ -4,7 +4,7 @@ import {
   getUnsupportedObserveProviderMessage,
   renderObserveProviderHelp,
   renderObserveSupportedProviders,
-} from "@opsy/contracts";
+} from "../catalog";
 import { ApiRequestError, apiRequest } from "../client";
 import { getApiUrl, getToken } from "../config";
 import { formatTable, output } from "../output";
@@ -307,7 +307,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
           deps.log(`Query completed with status ${data.status} and returned no rows.`);
           return;
         }
-        const columns = Array.from(new Set(data.rows.flatMap((row: Record<string, unknown>) => Object.keys(row))));
+        const columns: string[] = Array.from(new Set(data.rows.flatMap((row: Record<string, unknown>) => Object.keys(row))));
         deps.log(formatTable(
           columns,
           data.rows.map((row: Record<string, unknown>) => columns.map((column) => String(row[column] ?? ""))),

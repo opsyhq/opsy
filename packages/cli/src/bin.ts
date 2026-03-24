@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { authCmd } from "./commands/auth";
 import { projectCmd } from "./commands/project";
@@ -11,10 +12,19 @@ import { feedbackCmd } from "./commands/feedback";
 import { discoverCmd } from "./commands/discover";
 import { observeCmd } from "./commands/observe";
 
+function getCliVersion(): string {
+  try {
+    const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version?: string };
+    return packageJson.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 const program = new Command()
   .name("opsy")
   .description("Opsy CLI — Agent-to-Infrastructure control plane")
-  .version("0.0.1")
+  .version(getCliVersion())
   .option("--token <pat>", "Personal Access Token (env: OPSY_TOKEN)")
   .option("--api-url <url>", "API URL (env: OPSY_API_URL)")
   .option("--json", "Output JSON")
