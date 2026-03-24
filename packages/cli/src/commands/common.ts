@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { findCommandSpec } from "@opsy/contracts";
+import { findCommandSpec, renderCommandErrorMessage } from "@opsy/contracts";
+import { ApiRequestError } from "../client";
 import { getApiUrl, getToken } from "../config";
 import { apiRequest } from "../client";
 
@@ -35,8 +36,34 @@ export function getRootFlags(command: Command): GlobalFlags {
 }
 
 export function handleCliError(error: unknown, deps: CliDeps): never {
-  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+  let message = error instanceof Error ? error.message : String(error);
+  if (error instanceof ApiRequestError) {
+    message = error.code ? `${error.code}: ${error.message}` : error.message;
+  }
+  deps.error(`Error: ${renderCommandErrorMessage(message)}`);
   return deps.exit(1);
+}
+
+export function requireOptionValue(value: string | undefined, name: string): string {
+  if (!value) {
+    throw new Error(`Missing --${name}.`);
+  }
+  return value;
+}
+
+export function requireArgumentValue(value: string | undefined, label: string): string {
+  if (!value) {
+    throw new Error(`Missing ${label}.`);
+  }
+  return value;
+}
+
+export function parseJsonFlag<T>(value: string, label: string): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    throw new Error(`Invalid JSON in --${label}.`);
+  }
 }
 
 export function addSharedHelp(command: Command, path: string[]) {
@@ -44,7 +71,11 @@ export function addSharedHelp(command: Command, path: string[]) {
   if (!spec) {
     return command;
   }
-  if (spec.examples?.length || spec.notes?.length || spec.flags?.length) {
+  const usageTail = spec.usage.split(" ").slice(path.length + 1).join(" ");
+  if (usageTail) {
+    command.usage(usageTail);
+  }
+  if (spec.examples?.length || spec.notes?.length || spec.flags?.length || spec.whenToUse?.length || spec.nextSteps?.length) {
     const flags = spec.flags?.length
       ? `\nFlags:\n${spec.flags.map((flag) => {
         const value = flag.value ? ` ${flag.value}` : "";
@@ -52,9 +83,11 @@ export function addSharedHelp(command: Command, path: string[]) {
         return `  --${flag.name}${value}${required}  ${flag.description}`;
       }).join("\n")}`
       : "";
+    const whenToUse = spec.whenToUse?.length ? `\nWhen to use:\n${spec.whenToUse.map((line) => `  ${line}`).join("\n")}` : "";
     const notes = spec.notes?.length ? `\nNotes:\n${spec.notes.map((note) => `  ${note}`).join("\n")}` : "";
     const examples = spec.examples?.length ? `\nExamples:\n${spec.examples.map((example) => `  ${example}`).join("\n")}` : "";
-    command.addHelpText("after", `\n${spec.usage}${flags}${notes}${examples}`);
+    const nextSteps = spec.nextSteps?.length ? `\nWhat to do next:\n${spec.nextSteps.map((line) => `  ${line}`).join("\n")}` : "";
+    command.addHelpText("after", `\nUsage:\n  ${spec.usage}${flags}${whenToUse}${examples}${notes}${nextSteps}`);
   }
   return command;
 }

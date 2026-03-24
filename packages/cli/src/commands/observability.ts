@@ -141,7 +141,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const groupsCmd = new Command("groups")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -192,7 +192,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(groupsCmd);
 
   const tailCmd = new Command("tail")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-group <name>", "Log group name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -229,7 +229,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(tailCmd);
 
   const eventsCmd = new Command("events")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-group <name>", "Log group name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -268,7 +268,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(eventsCmd);
 
   const queryCmd = new Command("query")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-groups <csv>", "Comma-separated log groups")
     .requiredOption("--query-string <text>", "Logs Insights query")
@@ -326,7 +326,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const metricsListCmd = new Command("list")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -375,7 +375,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   metricsCmd.addCommand(metricsListCmd);
 
   const metricsQueryCmd = new Command("query")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--queries <json-array>", "JSON array of MetricDataQueries")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -432,7 +432,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const alarmsListCmd = new Command("list")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -479,7 +479,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   alarmsCmd.addCommand(alarmsListCmd);
 
   const alarmsDetailCmd = new Command("detail")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -505,7 +505,7 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   alarmsCmd.addCommand(alarmsDetailCmd);
 
   const alarmsHistoryCmd = new Command("history")
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")

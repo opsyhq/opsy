@@ -5,6 +5,7 @@ import { createChangeCommand } from "./change";
 import { createFeedbackCommand } from "./feedback";
 import { createProviderCommand } from "./provider";
 import { createResourceCommand } from "./resource";
+import { createWorkspaceCommand } from "./workspace";
 
 function createProgram(commands: Command[]) {
   const program = new Command();
@@ -37,12 +38,49 @@ function createDeps() {
 }
 
 describe("noun-first CLI surface", () => {
-  test("top-level help shows noun-first commands", () => {
+  test("top-level help shows the zero-start workflow", () => {
     const program = createProgram([]);
-    expect(program.helpInformation()).toContain("Core nouns:");
-    expect(program.helpInformation()).toContain("resource");
-    expect(program.helpInformation()).toContain("observability aws");
-    expect(program.helpInformation()).not.toContain("Core verbs:");
+    const help = program.helpInformation();
+
+    expect(help).toContain("1. `opsy auth login --token <pat>`");
+    expect(help).toContain("2. `opsy workspace list`");
+    expect(help).toContain("resource list --workspace <slug> --env <slug>` returns root resources first");
+    expect(help).toContain("Use `opsy change create` for reviewable drafts");
+    expect(help).toContain("workspace");
+  });
+
+  test("workspace list hits the existing workspaces endpoint", async () => {
+    const requests: Array<{ path: string; method: string | undefined }> = [];
+    const program = createProgram([createWorkspaceCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method });
+        return [];
+      },
+    })]);
+
+    await program.parseAsync(["node", "opsy", "workspace", "list"], { from: "node" });
+
+    expect(requests).toEqual([{ path: "/workspaces", method: undefined }]);
+  });
+
+  test("workspace get and create use the existing workspaces endpoints", async () => {
+    const requests: Array<{ path: string; method: string | undefined; body?: unknown }> = [];
+    const program = createProgram([createWorkspaceCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method, body: opts?.body });
+        return { slug: "acme", name: "Acme" };
+      },
+    })]);
+
+    await program.parseAsync(["node", "opsy", "workspace", "get", "acme"], { from: "node" });
+    await program.parseAsync(["node", "opsy", "workspace", "create", "--slug", "acme", "--name", "Acme"], { from: "node" });
+
+    expect(requests).toEqual([
+      { path: "/workspaces/acme", method: undefined, body: undefined },
+      { path: "/workspaces", method: "POST", body: { slug: "acme", name: "Acme" } },
+    ]);
   });
 
   test("resource list hits the existing resources endpoint", async () => {

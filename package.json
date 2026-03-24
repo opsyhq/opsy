@@ -9,7 +9,7 @@
     "typecheck": "bun run --cwd packages/cli typecheck",
     "test": "bun run --cwd packages/cli test",
     "pack:check": "bun run --cwd packages/cli pack:check",
-    "docs:check": "grep -q 'npm install -g @opsyhq/opsy' README.md && ! grep -R -E 'opsy (workspace|stack|draft|revision|run|org)\\b' README.md skills/opsy/references/commands.md",
+    "docs:check": "grep -q 'npm install -g @opsyhq/opsy' README.md && ! grep -R -E 'opsy (project|stack|draft|revision|run|org)\\b' README.md skills/opsy/references/commands.md",
     "smoke": "node packages/cli/dist/bin.js --help >/dev/null && node packages/cli/dist/bin.js discovery --help >/dev/null && node packages/cli/dist/bin.js observability aws --help >/dev/null"
   }
 }

@@ -12,12 +12,12 @@ opsy auth logout
 
 Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`
 
-## Projects
+## Workspaces
 
 ```bash
-opsy project list
-opsy project get <slug>
-opsy project create --slug <slug> --name <name>
+opsy workspace list
+opsy workspace get <slug>
+opsy workspace create --slug <slug> --name <name>
 ```
 
 ## Environments

@@ -1,8 +1,6 @@
 # Opsy CLI
 
-Opsy is an agent-friendly infrastructure control plane. This package installs the `opsy` CLI for managing projects, environments, resources, changes, discovery, and observability workflows against the Opsy API.
-
-The public GitHub repo mirrors the shipped CLI source for inspection and verification. Releases are published from Opsy's private source-of-truth monorepo.
+Opsy is an agent-friendly infrastructure control plane. The `opsy` CLI exposes the same operator surface that Opsy MCP uses: explicit workspaces, environments, resources, and changes.
 
 ## Install
 
@@ -10,31 +8,48 @@ The public GitHub repo mirrors the shipped CLI source for inspection and verific
 npm install -g @opsyhq/opsy
 ```
 
-## Quick start
+## Zero-Start Flow
+
+Start from clean discovery. Do not assume a remembered target.
 
 ```bash
 opsy auth login --token <pat>
-opsy project list
-opsy environment list --workspace <slug>
-opsy resource list --workspace <slug> --env <slug>
+opsy workspace list
+opsy environment list --workspace <workspace-slug>
+opsy resource list --workspace <workspace-slug> --env <env-slug>
+opsy resource get <resource-slug> --workspace <workspace-slug> --env <env-slug>
 ```
 
-## Commands
+`resource list` returns root resources first. Add `--parent <slug>` to walk down the tree.
 
-```text
-auth           Authentication
-project        Projects
-environment    Environments inside a project
-resource       Managed resources and resource lifecycle actions
-change         Proposed and applied changes
-provider       Provider profiles
-schema         Resource schema browsing
-discovery      Provider-scoped resource discovery
-observability  Provider-scoped logs, metrics, and alarms
-feedback       Submit feedback to the Opsy team
+## Mutation Paths
+
+Use a draft change when the work should be reviewable or span multiple mutations:
+
+```bash
+opsy change create --workspace <workspace-slug> --env <env-slug> --summary "Create base network"
+opsy change append <shortId> --mutations '[...]'
+opsy change preview <shortId>
+opsy change apply <shortId>
 ```
 
-Use `opsy --help` for the top-level command tree, `opsy discovery aws --help` for discovery commands, and `opsy observability aws --help` for CloudWatch observability commands.
+Use one-off resource mutations when you want a single mutation and immediate apply if policy allows:
+
+```bash
+opsy resource create --workspace <workspace-slug> --env <env-slug> --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'
+opsy resource update <resource-slug> --workspace <workspace-slug> --env <env-slug> --inputs '{"key":"value"}'
+opsy resource delete <resource-slug> --workspace <workspace-slug> --env <env-slug>
+```
+
+## Help
+
+Use the product surface itself as the guide:
+
+```bash
+opsy --help
+opsy workspace list --help
+opsy change create --help
+```
 
 ## Authentication
 

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { addSharedHelp, defaultCliDeps, getRootFlags, handleCliError, type CliDeps } from "./common";
+import { addSharedHelp, defaultCliDeps, getRootFlags, handleCliError, requireArgumentValue, requireOptionValue, type CliDeps } from "./common";
 import { formatTable, output } from "../output";
 
 export function createEnvironmentCommand(deps: CliDeps = defaultCliDeps) {
@@ -8,13 +8,14 @@ export function createEnvironmentCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     environmentCmd.command("list")
       .description("List environments")
-      .requiredOption("--workspace <slug>", "Project slug")
-      .action(async function (this: Command, opts: { workspace: string }) {
+      .option("--workspace <slug>", "Workspace slug")
+      .action(async function (this: Command, opts: { workspace?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          const envs = await deps.apiRequest<any[]>(`/workspaces/${opts.workspace}/environments`, { token, apiUrl });
+          const workspace = requireOptionValue(opts.workspace, "workspace");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          const envs = await deps.apiRequest<any[]>(`/workspaces/${workspace}/environments`, { token, apiUrl });
           if (flags.json) return output(envs, flags);
           if (!envs.length) return deps.log("No environments found.");
           deps.log(formatTable(
@@ -31,14 +32,19 @@ export function createEnvironmentCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     environmentCmd.command("get")
       .description("Get one environment")
-      .argument("<slug>")
-      .requiredOption("--workspace <slug>", "Project slug")
-      .action(async function (this: Command, slug: string, opts: { workspace: string }) {
+      .argument("[slug]")
+      .option("--workspace <slug>", "Workspace slug")
+      .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${slug}`, { token, apiUrl }), flags);
+          const workspace = requireOptionValue(opts.workspace, "workspace");
+          const envSlug = requireArgumentValue(slug, "environment slug");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(
+            `/workspaces/${workspace}/environments/${envSlug}`,
+            { token, apiUrl },
+          ), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -49,16 +55,18 @@ export function createEnvironmentCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     environmentCmd.command("create")
       .description("Create an environment")
-      .requiredOption("--workspace <slug>", "Project slug")
-      .requiredOption("--slug <slug>", "Environment slug")
-      .action(async function (this: Command, opts: { workspace: string; slug: string }) {
+      .option("--workspace <slug>", "Workspace slug")
+      .option("--slug <slug>", "Environment slug")
+      .action(async function (this: Command, opts: { workspace?: string; slug?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments`, {
+          const workspace = requireOptionValue(opts.workspace, "workspace");
+          const slug = requireOptionValue(opts.slug, "slug");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/workspaces/${workspace}/environments`, {
             method: "POST",
-            body: { slug: opts.slug },
+            body: { slug },
             token,
             apiUrl,
           }), flags);

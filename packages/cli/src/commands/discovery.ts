@@ -121,7 +121,7 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("types")
     .description(`List ${config.label} resource types that support discovery`)
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--query <text>", "Filter by resource type")
     .action(async function (this: Command, opts: { workspace: string; env: string; query?: string }) {
@@ -149,7 +149,7 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("list")
     .description(`List existing ${config.label} resources`)
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--type <type>", config.typeHelp)
     .option("--location <location>", "Filter by discovery location")
@@ -194,7 +194,7 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("inspect")
     .description(`Inspect a single ${config.label} resource`)
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription)
     .requiredOption("--type <type>", "Pulumi token or discovery type")
@@ -224,7 +224,7 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("import")
     .description(`Import discovered ${config.label} resources`)
-    .requiredOption("--workspace <slug>", "Project slug")
+    .requiredOption("--workspace <slug>", "Workspace slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--items <json>", "JSON array of {providerId, type, slug, importId?}")
     .action(async function (this: Command, opts: { workspace: string; env: string; items: string }) {

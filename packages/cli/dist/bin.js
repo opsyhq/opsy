@@ -2371,6 +2371,9 @@ ${sections.join(`
 function flags(...entries) {
   return entries;
 }
+function command(spec) {
+  return spec;
+}
 var OPSY_DISCOVERY_PROVIDERS = [
   { id: "aws", label: "AWS" },
   { id: "cloudflare", label: "Cloudflare" }
@@ -2378,336 +2381,644 @@ var OPSY_DISCOVERY_PROVIDERS = [
 function getUnsupportedDiscoveryProviderMessage(provider) {
   return `Discovery is not implemented for "${provider}". Use manual import.`;
 }
-var OPSY_DOMAIN_GUIDANCE = `
-Resources are the core primitive. Treat the resource tree as real hierarchy.
-
-Mutation format:
-  {kind:"create", slug, type, inputs, parentSlug?}
-  {kind:"update", slug, inputs?, removeInputPaths?, version?, parentSlug?}
-  {kind:"delete", slug, recursive?, force?}
-  {kind:"import", slug, type, cloudId, parentSlug?}
-
-Cross-resource refs: use \${slug.outputField} in inputs to reference outputs from other resources.
-Opsy resolves refs and executes operations in dependency order.
-Use schema get to inspect fields when you genuinely need it.
-On update, set parentSlug to move a resource under another parent. Use parentSlug:null to move to the top level.
-Use removeInputPaths:["a.b.c"] to delete nested keys while keeping deep-merge update behavior.
-
-Groups: use type:"group" to create virtual folders. Groups auto-complete on apply and cannot be imported or forgotten.
-
-Convenience resource wrappers:
-  resource create / resource update / resource delete
-  These create a change with one mutation and immediately attempt apply.
-  If environment policy blocks apply, the response returns approvalRequired:true plus reviewUrl.
-
-Efficiency:
-  1. Type tokens follow Pulumi format: <provider>:<module>/<Resource>:<Resource>
-  2. Prefer proposing directly and use validation errors as feedback.
-  3. Batch related mutations into one change where possible.
-`.trim();
 var OPSY_COMMAND_SPECS = [
-  {
-    id: "project.list",
-    path: ["project", "list"],
-    usage: "opsy project list",
-    summary: "List projects."
-  },
-  {
-    id: "project.get",
-    path: ["project", "get"],
-    usage: "opsy project get <slug>",
-    summary: "Get one project."
-  },
-  {
-    id: "project.create",
-    path: ["project", "create"],
-    usage: "opsy project create --slug <slug> --name <name>",
-    summary: "Create a project."
-  },
-  {
+  command({
+    id: "workspace.list",
+    path: ["workspace", "list"],
+    usage: "opsy workspace list",
+    summary: "List workspaces you can target.",
+    examples: [
+      "opsy workspace list"
+    ],
+    whenToUse: [
+      "Start here on a fresh install or fresh MCP session when you do not know any workspace slugs yet."
+    ],
+    nextSteps: [
+      "Run `opsy environment list --workspace <slug>` with one returned workspace slug."
+    ]
+  }),
+  command({
+    id: "workspace.get",
+    path: ["workspace", "get"],
+    usage: "opsy workspace get <slug>",
+    summary: "Get one workspace by slug.",
+    examples: [
+      "opsy workspace get acme"
+    ],
+    whenToUse: [
+      "Use this when you already know the workspace slug and want to confirm its details before targeting environments inside it."
+    ],
+    nextSteps: [
+      "Run `opsy environment list --workspace <slug>` to discover environments in that workspace."
+    ]
+  }),
+  command({
+    id: "workspace.create",
+    path: ["workspace", "create"],
+    usage: "opsy workspace create --slug <slug> --name <name>",
+    summary: "Create a new workspace.",
+    flags: flags({ name: "slug", value: "<slug>", required: true, description: "Workspace slug." }, { name: "name", value: "<name>", required: true, description: "Workspace display name." }),
+    examples: [
+      'opsy workspace create --slug acme --name "Acme Production"'
+    ],
+    whenToUse: [
+      "Use this only when you need a brand new top-level workspace, not when you are trying to discover an existing one."
+    ],
+    nextSteps: [
+      "Run `opsy environment create --workspace <slug> --slug <env-slug>` or `opsy environment list --workspace <slug>`."
+    ]
+  }),
+  command({
     id: "environment.list",
     path: ["environment", "list"],
     usage: "opsy environment list --workspace <workspace>",
-    summary: "List environments for a project.",
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." })
-  },
-  {
+    summary: "List environments inside one workspace.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }),
+    examples: [
+      "opsy environment list --workspace acme"
+    ],
+    whenToUse: [
+      "Use this right after `workspace list` to discover valid environment slugs for one workspace."
+    ],
+    nextSteps: [
+      "Run `opsy resource list --workspace <slug> --env <slug>` with one returned environment slug."
+    ]
+  }),
+  command({
     id: "environment.get",
     path: ["environment", "get"],
     usage: "opsy environment get <slug> --workspace <workspace>",
     summary: "Get one environment.",
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." })
-  },
-  {
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }),
+    examples: [
+      "opsy environment get prod --workspace acme"
+    ],
+    whenToUse: [
+      "Use this when you already know an environment slug and want its summary before listing or mutating resources inside it."
+    ],
+    nextSteps: [
+      "Run `opsy resource list --workspace <slug> --env <slug>` to inspect root resources."
+    ]
+  }),
+  command({
     id: "environment.create",
     path: ["environment", "create"],
     usage: "opsy environment create --workspace <workspace> --slug <slug>",
-    summary: "Create an environment."
-  },
-  {
+    summary: "Create an environment inside a workspace.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "slug", value: "<slug>", required: true, description: "Environment slug." }),
+    examples: [
+      "opsy environment create --workspace acme --slug prod"
+    ],
+    whenToUse: [
+      "Use this when the workspace already exists and you need a new target environment inside it."
+    ],
+    nextSteps: [
+      "Run `opsy resource list --workspace <slug> --env <slug>` after the environment exists."
+    ]
+  }),
+  command({
     id: "resource.list",
     path: ["resource", "list"],
     usage: "opsy resource list --workspace <workspace> --env <env> [--parent <slug>] [--detailed]",
-    summary: "List resources in an environment.",
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "parent", value: "<slug>", description: "Filter to children of one resource." }, { name: "detailed", description: "Include full resource records instead of summary rows." })
-  },
-  {
+    summary: "List resources in an environment. With no `--parent`, Opsy returns root resources first.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "parent", value: "<slug>", description: "List only the children under one resource slug." }, { name: "detailed", description: "Return full resource records instead of compact list rows." }),
+    examples: [
+      "opsy resource list --workspace acme --env prod",
+      "opsy resource list --workspace acme --env prod --parent network"
+    ],
+    whenToUse: [
+      "Use this as the default read-first entry point before `resource get`, `change create`, or one-off resource mutations.",
+      "Traverse the tree top-down: roots first, then add `--parent <slug>` when you want to drill into children."
+    ],
+    nextSteps: [
+      "Run `opsy resource get <slug> --workspace <slug> --env <slug>` for one returned resource.",
+      "Use `--parent <slug>` with one returned root slug to keep traversing the tree."
+    ]
+  }),
+  command({
     id: "resource.get",
     path: ["resource", "get"],
     usage: "opsy resource get <slug> --workspace <workspace> --env <env> [--live]",
     summary: "Get one resource.",
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "live", description: "Include live cloud state comparison." })
-  },
-  {
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "live", description: "Include live cloud state comparison." }),
+    examples: [
+      "opsy resource get vpc --workspace acme --env prod",
+      "opsy resource get vpc --workspace acme --env prod --live"
+    ],
+    whenToUse: [
+      "Use this after `resource list` when you need the full desired state, status, and optionally live state for one resource."
+    ],
+    nextSteps: [
+      "Choose a mutation path: `opsy change create --workspace <slug> --env <slug>` for a draft, or `opsy resource update <slug> --workspace <slug> --env <slug> --inputs <json>` for a one-off mutation."
+    ]
+  }),
+  command({
     id: "resource.create",
     path: ["resource", "create"],
-    usage: "opsy resource create --workspace <workspace> --env <env> --slug <slug> --type <type> --inputs <json> [--parent <slug>]",
-    summary: "Create one resource by proposing one mutation and immediately attempting apply.",
+    usage: "opsy resource create --workspace <workspace> --env <env> --slug <slug> --type <type> --inputs <json> [--parent <slug>] [--summary <text>]",
+    summary: "Create one resource by proposing a single mutation and immediately attempting apply.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "slug", value: "<slug>", required: true, description: "Resource slug." }, { name: "type", value: "<type>", required: true, description: "Pulumi resource token." }, { name: "inputs", value: "<json>", required: true, description: "Resource inputs JSON object." }, { name: "parent", value: "<slug>", description: "Optional parent resource slug." }, { name: "summary", value: "<text>", description: "Optional change summary." }),
     examples: [
       `opsy resource create --workspace acme --env prod --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'`,
       `opsy resource create --workspace acme --env prod --slug site-zone --type cloudflare:index/zone:Zone --inputs '{"account":{"id":"<account-id>"},"zone":"example.com"}'`
     ],
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "slug", value: "<slug>", required: true, description: "Resource slug." }, { name: "type", value: "<type>", required: true, description: "Resource token." }, { name: "inputs", value: "<json>", required: true, description: "Resource inputs JSON object." }, { name: "parent", value: "<slug>", description: "Optional parent resource slug." })
-  },
-  {
+    whenToUse: [
+      "Use this for a one-off resource creation when you do not need to stage multiple mutations in a draft first."
+    ],
+    nextSteps: [
+      "Inspect the returned change or approval result. If you need a staged workflow instead, start with `opsy change create --workspace <slug> --env <slug>`."
+    ]
+  }),
+  command({
     id: "resource.update",
     path: ["resource", "update"],
-    usage: "opsy resource update <slug> --workspace <workspace> --env <env> --inputs <json>",
-    summary: "Update one resource by proposing one mutation and immediately attempting apply."
-  },
-  {
+    usage: "opsy resource update <slug> --workspace <workspace> --env <env> --inputs <json> [--remove-input-paths <json>] [--parent <slug>] [--version <n>] [--summary <text>]",
+    summary: "Update one resource by proposing a single mutation and immediately attempting apply.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "inputs", value: "<json>", required: true, description: "Inputs JSON object." }, { name: "remove-input-paths", value: "<json>", description: "JSON array of nested input paths to remove." }, { name: "parent", value: "<slug>", description: "Move the resource under a different parent slug." }, { name: "version", value: "<n>", description: "Optimistic-lock version." }, { name: "summary", value: "<text>", description: "Optional change summary." }),
+    examples: [
+      `opsy resource update vpc --workspace acme --env prod --inputs '{"enableDnsHostnames":true}'`
+    ],
+    whenToUse: [
+      "Use this for a single direct edit after you have already inspected the resource with `resource get`."
+    ],
+    nextSteps: [
+      "Inspect the returned change or approval result. Use `opsy change create --workspace <slug> --env <slug>` instead when you want a reviewable draft with multiple steps."
+    ]
+  }),
+  command({
     id: "resource.delete",
     path: ["resource", "delete"],
     usage: "opsy resource delete <slug> --workspace <workspace> --env <env> [--recursive]",
-    summary: "Delete one resource by proposing one mutation and immediately attempting apply."
-  },
-  {
+    summary: "Delete one resource by proposing a single mutation and immediately attempting apply.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "recursive", description: "Delete descendants too." }),
+    examples: [
+      "opsy resource delete old-bucket --workspace acme --env prod"
+    ],
+    whenToUse: [
+      "Use this for a one-off deletion after you have confirmed the target resource and scope."
+    ],
+    nextSteps: [
+      "Inspect the returned change or approval result. Use `opsy change create --workspace <slug> --env <slug>` if this delete belongs in a larger staged change."
+    ]
+  }),
+  command({
     id: "resource.diff",
     path: ["resource", "diff"],
     usage: "opsy resource diff <slug> --workspace <workspace> --env <env>",
     summary: "Compare stored and live resource state."
-  },
-  {
+  }),
+  command({
     id: "resource.refresh",
     path: ["resource", "refresh"],
     usage: "opsy resource refresh <slug> --workspace <workspace> --env <env>",
     summary: "Refresh a resource from cloud and recompute conflict state."
-  },
-  {
+  }),
+  command({
     id: "resource.accept-live",
     path: ["resource", "accept-live"],
     usage: "opsy resource accept-live <slug> --workspace <workspace> --env <env>",
     summary: "Accept recorded live state into desired inputs."
-  },
-  {
+  }),
+  command({
     id: "resource.reconcile",
     path: ["resource", "reconcile"],
     usage: "opsy resource reconcile <slug> --workspace <workspace> --env <env>",
     summary: "Promote desired state back to cloud through a change."
-  },
-  {
+  }),
+  command({
     id: "resource.restore",
     path: ["resource", "restore"],
     usage: "opsy resource restore <slug> --workspace <workspace> --env <env> --operation <operationId>",
     summary: "Restore a resource to the state captured before an operation."
-  },
-  {
+  }),
+  command({
     id: "resource.history",
     path: ["resource", "history"],
     usage: "opsy resource history <slug> --workspace <workspace> --env <env>",
     summary: "List operation history for one resource."
-  },
-  {
+  }),
+  command({
     id: "change.list",
     path: ["change", "list"],
     usage: "opsy change list --workspace <workspace> --env <env>",
-    summary: "List recent changes.",
-    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." })
-  },
-  { id: "change.get", path: ["change", "get"], usage: "opsy change get <shortId>", summary: "Get one change with operations." },
-  {
+    summary: "List recent changes in one environment.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }),
+    examples: [
+      "opsy change list --workspace acme --env prod"
+    ],
+    whenToUse: [
+      "Use this when you need an existing change shortId for `change get`, `change preview`, `change append`, or `change apply`."
+    ],
+    nextSteps: [
+      "Run `opsy change get <shortId>` for details on one returned change."
+    ]
+  }),
+  command({
+    id: "change.get",
+    path: ["change", "get"],
+    usage: "opsy change get <shortId>",
+    summary: "Get one change with operations.",
+    examples: [
+      "opsy change get abcd1234"
+    ],
+    whenToUse: [
+      "Use this after `change list` or after a create/apply response gives you a shortId."
+    ],
+    nextSteps: [
+      "Run `opsy change preview <shortId>` to inspect execution details, or `opsy change apply <shortId>` to execute it."
+    ]
+  }),
+  command({
     id: "change.create",
     path: ["change", "create"],
     usage: "opsy change create --workspace <workspace> --env <env> [--mutations <json>] [--summary <text>]",
-    summary: "Create a change, optionally with mutations."
-  },
-  {
+    summary: "Create a draft change, optionally seeded with mutations.",
+    flags: flags({ name: "workspace", value: "<workspace>", required: true, description: "Workspace slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "mutations", value: "<json>", description: "JSON array of mutations to seed the draft." }, { name: "summary", value: "<text>", description: "Optional human summary for the change." }),
+    examples: [
+      'opsy change create --workspace acme --env prod --summary "Create base network"',
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create VPC"`
+    ],
+    whenToUse: [
+      "Use this when you want a reviewable draft before applying mutations, especially when the work spans multiple resources."
+    ],
+    nextSteps: [
+      "Run `opsy change append <shortId> --mutations <json>` to add more work.",
+      "Run `opsy change preview <shortId>` to inspect the plan.",
+      "Run `opsy change apply <shortId>` when the draft is ready."
+    ]
+  }),
+  command({
     id: "change.append",
     path: ["change", "append"],
     usage: "opsy change append <shortId> --mutations <json> [--summary <text>]",
-    summary: "Append mutations to an open change."
-  },
-  { id: "change.preview", path: ["change", "preview"], usage: "opsy change preview <shortId>", summary: "Preview a change." },
-  { id: "change.apply", path: ["change", "apply"], usage: "opsy change apply <shortId>", summary: "Apply a change." },
-  { id: "change.discard", path: ["change", "discard"], usage: "opsy change discard <shortId>", summary: "Discard a change." },
-  { id: "change.retry", path: ["change", "retry"], usage: "opsy change retry <shortId>", summary: "Retry a failed change." },
-  { id: "provider.list", path: ["provider", "list"], usage: "opsy provider list", summary: "List provider profiles." },
-  { id: "provider.get", path: ["provider", "get"], usage: "opsy provider get <id>", summary: "Get one provider profile." },
-  {
+    summary: "Append mutations to an existing open change.",
+    flags: flags({ name: "mutations", value: "<json>", required: true, description: "JSON array of mutations to append." }, { name: "summary", value: "<text>", description: "Optional summary override." }),
+    examples: [
+      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"vpc","inputs":{"enableDnsHostnames":true}}]'`
+    ],
+    whenToUse: [
+      "Use this after `change create` when you are building up a staged change in multiple steps."
+    ],
+    nextSteps: [
+      "Run `opsy change preview <shortId>` to inspect the updated draft.",
+      "Run `opsy change apply <shortId>` when the change is ready."
+    ]
+  }),
+  command({
+    id: "change.preview",
+    path: ["change", "preview"],
+    usage: "opsy change preview <shortId>",
+    summary: "Preview a change.",
+    examples: [
+      "opsy change preview abcd1234"
+    ],
+    whenToUse: [
+      "Use this before apply when you want to inspect the planned operations and dependencies."
+    ],
+    nextSteps: [
+      "Run `opsy change apply <shortId>` if the preview is acceptable."
+    ]
+  }),
+  command({
+    id: "change.apply",
+    path: ["change", "apply"],
+    usage: "opsy change apply <shortId>",
+    summary: "Apply a change.",
+    examples: [
+      "opsy change apply abcd1234"
+    ],
+    whenToUse: [
+      "Use this after you have created or previewed a change and want Opsy to execute it."
+    ],
+    nextSteps: [
+      "If approval is required, open the returned review URL. Otherwise inspect the resulting change with `opsy change get <shortId>`."
+    ]
+  }),
+  command({
+    id: "change.discard",
+    path: ["change", "discard"],
+    usage: "opsy change discard <shortId>",
+    summary: "Discard a change."
+  }),
+  command({
+    id: "change.retry",
+    path: ["change", "retry"],
+    usage: "opsy change retry <shortId>",
+    summary: "Retry a failed change."
+  }),
+  command({
+    id: "provider.list",
+    path: ["provider", "list"],
+    usage: "opsy provider list",
+    summary: "List provider profiles."
+  }),
+  command({
+    id: "provider.get",
+    path: ["provider", "get"],
+    usage: "opsy provider get <id>",
+    summary: "Get one provider profile."
+  }),
+  command({
     id: "provider.create",
     path: ["provider", "create"],
     usage: "opsy provider create --provider <provider> --name <name> --config <json>",
     summary: "Create a provider profile."
-  },
-  {
+  }),
+  command({
     id: "schema.list",
     path: ["schema", "list"],
     usage: "opsy schema list --provider <provider> [--query <text>]",
-    summary: "List resource schemas for a provider.",
+    summary: "List resource schemas for one provider.",
+    flags: flags({ name: "provider", value: "<provider>", required: true, description: "Provider package, for example `aws` or `cloudflare`." }, { name: "query", value: "<text>", description: "Optional filter on the resource token." }),
     examples: [
-      "opsy schema list --provider cloudflare --query zone"
+      "opsy schema list --provider cloudflare --query zone",
+      "opsy schema list --provider aws --query vpc"
     ],
-    flags: flags({ name: "provider", value: "<provider>", required: true, description: "Provider package, for example aws." }, { name: "query", value: "<text>", description: "Filter by schema token." })
-  },
-  {
+    whenToUse: [
+      "Use this only when you need help finding the exact type token before creating or updating a resource."
+    ],
+    nextSteps: [
+      "Run `opsy schema get <type-token>` for one returned type when you need field details."
+    ]
+  }),
+  command({
     id: "schema.get",
     path: ["schema", "get"],
     usage: "opsy schema get <type-token>",
     summary: "Describe one resource schema.",
     examples: [
-      "opsy schema get cloudflare:index/zone:Zone"
+      "opsy schema get cloudflare:index/zone:Zone",
+      "opsy schema get aws:ec2/vpc:Vpc"
+    ],
+    whenToUse: [
+      "Use this after `schema list` when you need field details for a specific resource type."
+    ],
+    nextSteps: [
+      "Return to `opsy resource create ... --type <type-token>` or `opsy change create ... --mutations <json>` with the schema details in hand."
     ]
-  },
-  {
+  }),
+  command({
     id: "discovery.aws.types",
     path: ["discovery", "aws", "types"],
     usage: "opsy discovery aws types --workspace <workspace> --env <env> [--query <text>]",
     summary: "List AWS discovery types."
-  },
-  {
+  }),
+  command({
     id: "discovery.aws.list",
     path: ["discovery", "aws", "list"],
     usage: "opsy discovery aws list --workspace <workspace> --env <env> [--type <type>] [--region <region>]",
     summary: "List existing AWS resources."
-  },
-  {
+  }),
+  command({
     id: "discovery.aws.inspect",
     path: ["discovery", "aws", "inspect"],
     usage: "opsy discovery aws inspect --workspace <workspace> --env <env> --cloud-id <id> --type <type>",
     summary: "Inspect one AWS resource."
-  },
-  {
+  }),
+  command({
     id: "discovery.aws.import",
     path: ["discovery", "aws", "import"],
     usage: "opsy discovery aws import --workspace <workspace> --env <env> --items <json>",
     summary: "Import existing AWS resources into a change."
-  },
-  {
+  }),
+  command({
     id: "discovery.cloudflare.types",
     path: ["discovery", "cloudflare", "types"],
     usage: "opsy discovery cloudflare types --workspace <workspace> --env <env> [--query <text>]",
     summary: "List Cloudflare discovery types."
-  },
-  {
+  }),
+  command({
     id: "discovery.cloudflare.list",
     path: ["discovery", "cloudflare", "list"],
     usage: "opsy discovery cloudflare list --workspace <workspace> --env <env> [--type <type>] [--location <location>]",
     summary: "List existing Cloudflare resources."
-  },
-  {
+  }),
+  command({
     id: "discovery.cloudflare.inspect",
     path: ["discovery", "cloudflare", "inspect"],
     usage: "opsy discovery cloudflare inspect --workspace <workspace> --env <env> --provider-id <id> --type <type>",
     summary: "Inspect one Cloudflare resource."
-  },
-  {
+  }),
+  command({
     id: "discovery.cloudflare.import",
     path: ["discovery", "cloudflare", "import"],
     usage: "opsy discovery cloudflare import --workspace <workspace> --env <env> --items <json>",
     summary: "Import existing Cloudflare resources into a change."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.logs.groups",
     path: ["observability", "aws", "logs", "groups"],
     usage: "opsy observability aws logs groups --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch log groups."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.logs.tail",
     path: ["observability", "aws", "logs", "tail"],
     usage: "opsy observability aws logs tail --workspace <workspace> --env <env> --log-group <name> [...]",
     summary: "Tail CloudWatch log events."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.logs.events",
     path: ["observability", "aws", "logs", "events"],
     usage: "opsy observability aws logs events --workspace <workspace> --env <env> --log-group <name> [...]",
     summary: "List CloudWatch log events."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.logs.query",
     path: ["observability", "aws", "logs", "query"],
     usage: "opsy observability aws logs query --workspace <workspace> --env <env> --log-groups <csv> --query-string <query> [...]",
     summary: "Run a CloudWatch Logs Insights query."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.metrics.list",
     path: ["observability", "aws", "metrics", "list"],
     usage: "opsy observability aws metrics list --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch metrics."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.metrics.query",
     path: ["observability", "aws", "metrics", "query"],
     usage: "opsy observability aws metrics query --workspace <workspace> --env <env> --queries <json> [...]",
     summary: "Run CloudWatch metric queries."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.alarms.list",
     path: ["observability", "aws", "alarms", "list"],
     usage: "opsy observability aws alarms list --workspace <workspace> --env <env> [...]",
     summary: "List CloudWatch alarms."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.alarms.detail",
     path: ["observability", "aws", "alarms", "detail"],
     usage: "opsy observability aws alarms detail --workspace <workspace> --env <env> --alarm-name <name>",
     summary: "Get one CloudWatch alarm."
-  },
-  {
+  }),
+  command({
     id: "observability.aws.alarms.history",
     path: ["observability", "aws", "alarms", "history"],
     usage: "opsy observability aws alarms history --workspace <workspace> --env <env> --alarm-name <name> [...]",
     summary: "List CloudWatch alarm history."
-  },
-  {
+  }),
+  command({
     id: "feedback.send",
     path: ["feedback", "send"],
     usage: "opsy feedback send --message <text> [--error-context <json>] [--from-llm]",
     summary: "Submit feedback to the Opsy team."
-  },
-  { id: "auth.login", path: ["auth", "login"], usage: "opsy auth login --token <token> [--api-url <url>]", summary: "Store CLI credentials." },
-  { id: "auth.logout", path: ["auth", "logout"], usage: "opsy auth logout", summary: "Clear stored CLI credentials." },
-  { id: "auth.whoami", path: ["auth", "whoami"], usage: "opsy auth whoami", summary: "Show the current authenticated actor." }
+  }),
+  command({
+    id: "auth.login",
+    path: ["auth", "login"],
+    usage: "opsy auth login --token <token> [--api-url <url>]",
+    summary: "Store CLI credentials.",
+    flags: flags({ name: "token", value: "<token>", required: true, description: "Personal access token." }, { name: "api-url", value: "<url>", description: "Optional API base URL." }),
+    examples: [
+      "opsy auth login --token <pat>"
+    ],
+    whenToUse: [
+      "CLI only. Run this before the first CLI command unless you already pass `--token` or `OPSY_TOKEN` on each call."
+    ],
+    nextSteps: [
+      "Run `opsy workspace list` to begin explicit workspace discovery."
+    ]
+  }),
+  command({
+    id: "auth.logout",
+    path: ["auth", "logout"],
+    usage: "opsy auth logout",
+    summary: "Clear stored CLI credentials."
+  }),
+  command({
+    id: "auth.whoami",
+    path: ["auth", "whoami"],
+    usage: "opsy auth whoami",
+    summary: "Show the current authenticated actor."
+  })
 ];
 var TOP_LEVEL_HELP = [
-  "Opsy command surface",
+  "Opsy manages infrastructure as explicit workspaces, environments, resources, and changes.",
   "",
-  "Core nouns:",
-  "  auth          Authentication commands",
-  "  project       Projects (existing workspace routes and behavior)",
-  "  environment   Environments inside a project",
-  "  resource      Managed resources and resource lifecycle actions",
-  "  change        Proposed and applied changes",
-  "  provider      Provider profiles",
-  "  schema        Resource schema browsing",
+  "First-run workflow:",
+  "  1. `opsy auth login --token <pat>`",
+  "  2. `opsy workspace list`",
+  "  3. `opsy environment list --workspace <slug>`",
+  "  4. `opsy resource list --workspace <slug> --env <slug>`",
+  "  5. `opsy resource get <slug> --workspace <slug> --env <slug>`",
+  "  6. `opsy change create ...` or `opsy resource create ...`",
   "",
-  "Cloud-scoped commands:",
-  "  discovery aws      Discover existing AWS resources",
-  "  discovery cloudflare  Discover existing Cloudflare resources",
-  "  observability aws  Read CloudWatch logs, metrics, and alarms",
+  "Read-first safety rule:",
+  "  Start with discovery and inspection before mutation. Read the tree, inspect one resource, then mutate.",
   "",
-  "Other:",
-  "  feedback send  Submit product feedback",
+  "Resource traversal:",
+  "  `opsy resource list --workspace <slug> --env <slug>` returns root resources first.",
+  "  Add `--parent <slug>` to walk down the tree one level at a time.",
   "",
-  'Use "opsy <noun> --help" or "opsy <noun> <action> --help" for details.'
+  "Mutation paths:",
+  "  Use `opsy change create` for reviewable drafts and multi-step work.",
+  "  Use `opsy resource create`, `opsy resource update`, or `opsy resource delete` for one-off mutations that should auto-apply when policy allows.",
+  "",
+  "More help:",
+  "  `opsy <noun> --help`",
+  "  `opsy <noun> <action> --help`",
+  "",
+  "Nouns:",
+  "  auth           CLI authentication",
+  "  workspace      Workspaces",
+  "  environment    Environments inside a workspace",
+  "  resource       Managed resources and resource lifecycle actions",
+  "  change         Proposed and applied changes",
+  "  provider       Provider profiles",
+  "  schema         Resource schema browsing",
+  "  discovery      Provider-scoped resource discovery",
+  "  observability  Provider-scoped logs, metrics, and alarms",
+  "  feedback       Submit feedback to the Opsy team"
 ].join(`
 `);
+function renderFlags(spec) {
+  if (!spec.flags?.length) {
+    return "";
+  }
+  return `
+Flags:
+${spec.flags.map((flag) => {
+    const name = `--${flag.name}${flag.value ? ` ${flag.value}` : ""}`;
+    const required = flag.required ? " (required)" : "";
+    return `  ${name}${required}  ${flag.description}`;
+  }).join(`
+`)}`;
+}
+function renderBulletedSection(title, lines) {
+  if (!lines?.length) {
+    return "";
+  }
+  return `
+${title}:
+${lines.map((line) => `  ${line}`).join(`
+`)}`;
+}
+function renderPrefixHelp(path, children) {
+  const nextParts = [...new Set(children.map((spec) => spec.path[path.length]))].filter(Boolean);
+  const lines = nextParts.map((part) => {
+    const child = children.find((spec) => spec.path[path.length] === part && spec.path.length === path.length + 1);
+    const summary = child?.summary ? `  ${child.summary}` : "";
+    return `  ${part}${summary}`;
+  });
+  return `${path.join(" ")}
+
+Subcommands:
+${lines.join(`
+`)}
+
+Use \`opsy ${path.join(" ")} <action> --help\` for command details.`;
+}
 function findCommandSpec(path) {
   return OPSY_COMMAND_SPECS.find((spec) => spec.path.join(" ") === path.join(" "));
 }
 function listCommandSpecsForPrefix(path) {
   return OPSY_COMMAND_SPECS.filter((spec) => path.every((part, index) => spec.path[index] === part));
+}
+function addNextStep(message, nextStep) {
+  return `${message} Next: ${nextStep}`;
+}
+function renderCommandErrorMessage(message) {
+  if (message.includes("Next:")) {
+    return message;
+  }
+  if (message === "Missing --workspace." || message === "Missing workspace slug.") {
+    return addNextStep(message, "run `opsy workspace list` and retry with one returned slug as `--workspace <slug>`.");
+  }
+  if (message === "Missing --env." || message === "Missing environment slug.") {
+    return addNextStep(message, "run `opsy environment list --workspace <slug>` and retry with one returned slug as `--env <slug>`.");
+  }
+  if (message === "Missing resource slug.") {
+    return addNextStep(message, "run `opsy resource list --workspace <slug> --env <slug>` and reuse one returned slug.");
+  }
+  if (message === "Missing change shortId.") {
+    return addNextStep(message, "run `opsy change list --workspace <slug> --env <slug>` and reuse one returned shortId.");
+  }
+  const invalidJson = message.match(/^Invalid JSON in --([a-z-]+)\.$/);
+  if (invalidJson) {
+    const flag = invalidJson[1];
+    if (flag === "mutations") {
+      return addNextStep(message, "pass a valid JSON array, then continue with `opsy change create --workspace <slug> --env <slug> --mutations '[...]'` or `opsy change append <shortId> --mutations '[...]'`.");
+    }
+    if (flag === "inputs") {
+      return addNextStep(message, "pass a valid JSON object, then retry the resource mutation command.");
+    }
+    return addNextStep(message, `pass valid JSON to \`--${flag}\` and retry the command.`);
+  }
+  if (message.includes('Workspace "') && message.includes("not found")) {
+    return addNextStep(message, "run `opsy workspace list` to confirm the workspace slug, then retry with `--workspace <slug>`.");
+  }
+  if ((message.includes('Environment "') || message.includes('Env "')) && message.includes("not found")) {
+    return addNextStep(message, "run `opsy environment list --workspace <slug>` to confirm the environment slug, then retry with `--env <slug>`.");
+  }
+  if (message.includes('Resource "') && message.includes("not found")) {
+    return addNextStep(message, "run `opsy resource list --workspace <slug> --env <slug>` to confirm the slug, or add `--parent <slug>` to keep traversing the tree.");
+  }
+  if (message.includes('Change "') && message.includes("not found")) {
+    return addNextStep(message, "run `opsy change list --workspace <slug> --env <slug>` to confirm the shortId, then retry.");
+  }
+  return message;
 }
 function renderCommandHelp(path) {
   if (path.length === 0) {
@@ -2751,38 +3062,91 @@ Use "opsy discovery <provider> --help" for provider-specific discovery commands.
   }
   const exact = findCommandSpec(path);
   if (exact) {
-    const flagLines = exact.flags?.length ? `
-Flags:
-${exact.flags.map((flag) => {
-      const name = `--${flag.name}${flag.value ? ` ${flag.value}` : ""}`;
-      const required = flag.required ? " (required)" : "";
-      return `  ${name}${required}  ${flag.description}`;
-    }).join(`
-`)}` : "";
-    const notes = exact.notes?.length ? `
-Notes:
-${exact.notes.map((note) => `  ${note}`).join(`
-`)}` : "";
-    const examples = exact.examples?.length ? `
-Examples:
-${exact.examples.map((example) => `  ${example}`).join(`
-`)}` : "";
-    return `${exact.usage}
-
-${exact.summary}${flagLines}${notes}${examples}`;
+    return [
+      `Usage:
+  ${exact.usage}`,
+      `
+${exact.summary}`,
+      renderFlags(exact),
+      renderBulletedSection("When to use", exact.whenToUse),
+      renderBulletedSection("Examples", exact.examples),
+      renderBulletedSection("Notes", exact.notes),
+      renderBulletedSection("What to do next", exact.nextSteps)
+    ].join("");
   }
   const children = listCommandSpecsForPrefix(path);
   if (children.length > 0) {
-    const nextParts = [...new Set(children.map((spec) => spec.path[path.length]))].filter(Boolean);
-    if (nextParts.length > 0) {
-      return `${path.join(" ")}
-
-Subcommands:
-${nextParts.map((part) => `  ${part}`).join(`
-`)}`;
-    }
+    return renderPrefixHelp(path, children);
   }
   return `Unknown help topic: ${path.join(" ")}`;
+}
+function parseCommandString(command2) {
+  const tokens = [];
+  let current = "";
+  let quote = null;
+  for (let index = 0;index < command2.length; index++) {
+    const char = command2[index];
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+  if (tokens[0] === "opsy") {
+    tokens.shift();
+  }
+  const positionals = [];
+  const flags2 = {};
+  for (let index = 0;index < tokens.length; index++) {
+    const token = tokens[index];
+    if (!token.startsWith("--")) {
+      positionals.push(token);
+      continue;
+    }
+    const name = token.slice(2);
+    const next = tokens[index + 1];
+    if (!next || next.startsWith("--")) {
+      flags2[name] = true;
+      continue;
+    }
+    flags2[name] = next;
+    index++;
+  }
+  return { positionals, flags: flags2 };
+}
+function normalizeCommandPath(positionals) {
+  if (positionals.length === 0) {
+    return [];
+  }
+  const [first] = positionals;
+  if (first === "discovery") {
+    return positionals.slice(0, Math.min(positionals.length, 3));
+  }
+  if (first === "observability") {
+    return positionals.slice(0, Math.min(positionals.length, 4));
+  }
+  if (first === "auth" || first === "workspace" || first === "environment" || first === "resource" || first === "change" || first === "provider" || first === "schema" || first === "feedback") {
+    return positionals.slice(0, Math.min(positionals.length, 2));
+  }
+  return positionals;
 }
 function getObserveSupportedProvidersMessage() {
   return renderObserveSupportedProviders();
@@ -2796,6 +3160,7 @@ function getUnsupportedDiscoveryProviderMessage2(provider) {
 }
 
 // src/commands/common.ts
+init_client();
 init_config();
 init_client();
 var defaultCliDeps = {
@@ -2806,22 +3171,49 @@ var defaultCliDeps = {
   error: (message) => console.error(message),
   exit: (code) => process.exit(code)
 };
-function getRootFlags(command) {
-  let current = command;
+function getRootFlags(command2) {
+  let current = command2;
   while (current.parent)
     current = current.parent;
   return current.opts();
 }
 function handleCliError(error, deps) {
-  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+  let message = error instanceof Error ? error.message : String(error);
+  if (error instanceof ApiRequestError) {
+    message = error.code ? `${error.code}: ${error.message}` : error.message;
+  }
+  deps.error(`Error: ${renderCommandErrorMessage(message)}`);
   return deps.exit(1);
 }
-function addSharedHelp(command, path) {
+function requireOptionValue(value, name) {
+  if (!value) {
+    throw new Error(`Missing --${name}.`);
+  }
+  return value;
+}
+function requireArgumentValue(value, label) {
+  if (!value) {
+    throw new Error(`Missing ${label}.`);
+  }
+  return value;
+}
+function parseJsonFlag(value, label) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error(`Invalid JSON in --${label}.`);
+  }
+}
+function addSharedHelp(command2, path) {
   const spec = findCommandSpec(path);
   if (!spec) {
-    return command;
+    return command2;
   }
-  if (spec.examples?.length || spec.notes?.length || spec.flags?.length) {
+  const usageTail = spec.usage.split(" ").slice(path.length + 1).join(" ");
+  if (usageTail) {
+    command2.usage(usageTail);
+  }
+  if (spec.examples?.length || spec.notes?.length || spec.flags?.length || spec.whenToUse?.length || spec.nextSteps?.length) {
     const flags2 = spec.flags?.length ? `
 Flags:
 ${spec.flags.map((flag) => {
@@ -2829,6 +3221,10 @@ ${spec.flags.map((flag) => {
       const required = flag.required ? " (required)" : "";
       return `  --${flag.name}${value}${required}  ${flag.description}`;
     }).join(`
+`)}` : "";
+    const whenToUse = spec.whenToUse?.length ? `
+When to use:
+${spec.whenToUse.map((line) => `  ${line}`).join(`
 `)}` : "";
     const notes = spec.notes?.length ? `
 Notes:
@@ -2838,10 +3234,15 @@ ${spec.notes.map((note) => `  ${note}`).join(`
 Examples:
 ${spec.examples.map((example) => `  ${example}`).join(`
 `)}` : "";
-    command.addHelpText("after", `
-${spec.usage}${flags2}${notes}${examples}`);
+    const nextSteps = spec.nextSteps?.length ? `
+What to do next:
+${spec.nextSteps.map((line) => `  ${line}`).join(`
+`)}` : "";
+    command2.addHelpText("after", `
+Usage:
+  ${spec.usage}${flags2}${whenToUse}${examples}${notes}${nextSteps}`);
   }
-  return command;
+  return command2;
 }
 
 // src/output.ts
@@ -2870,62 +3271,72 @@ function output(data, flags2) {
   }
 }
 
-// src/commands/project.ts
-function createProjectCommand(deps = defaultCliDeps) {
-  const projectCmd = new Command("project").description("List, get, and create projects");
-  addSharedHelp(projectCmd.command("list").description("List projects").action(async function() {
+// src/commands/workspace.ts
+function createWorkspaceCommand(deps = defaultCliDeps) {
+  const workspaceCmd = new Command("workspace").description("List, get, and create workspaces");
+  addSharedHelp(workspaceCmd.command("list").description("List workspaces").action(async function() {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const projects = await deps.apiRequest("/workspaces", { token, apiUrl });
+      const workspaces = await deps.apiRequest("/workspaces", { token, apiUrl });
       if (flags2.json)
-        return output(projects, flags2);
-      if (!projects.length)
-        return deps.log("No projects found.");
-      deps.log(formatTable(["SLUG", "NAME", "CREATED"], projects.map((project) => [project.slug, project.name, new Date(project.createdAt).toLocaleDateString()])));
+        return output(workspaces, flags2);
+      if (!workspaces.length)
+        return deps.log("No workspaces found.");
+      deps.log(formatTable(["SLUG", "NAME", "CREATED"], workspaces.map((workspace) => [workspace.slug, workspace.name, new Date(workspace.createdAt).toLocaleDateString()])));
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["project", "list"]);
-  addSharedHelp(projectCmd.command("get").description("Get one project").argument("<slug>").action(async function(slug) {
+  }), ["workspace", "list"]);
+  addSharedHelp(workspaceCmd.command("get").description("Get one workspace").argument("[slug]").action(async function(slug) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
+      if (!slug) {
+        throw new Error("Missing workspace slug.");
+      }
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
       output(await deps.apiRequest(`/workspaces/${slug}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["project", "get"]);
-  addSharedHelp(projectCmd.command("create").description("Create a project").requiredOption("--slug <slug>", "Project slug").requiredOption("--name <name>", "Project name").action(async function(opts) {
+  }), ["workspace", "get"]);
+  addSharedHelp(workspaceCmd.command("create").description("Create a workspace").option("--slug <slug>", "Workspace slug").option("--name <name>", "Workspace name").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
+      if (!opts.slug) {
+        throw new Error("Missing --slug.");
+      }
+      if (!opts.name) {
+        throw new Error("Missing --name.");
+      }
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
       output(await deps.apiRequest("/workspaces", {
         method: "POST",
-        body: opts,
+        body: { slug: opts.slug, name: opts.name },
         token,
         apiUrl
       }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
-  }), ["project", "create"]);
-  return projectCmd;
+  }), ["workspace", "create"]);
+  return workspaceCmd;
 }
-var projectCmd = createProjectCommand();
+var workspaceCmd = createWorkspaceCommand();
 
 // src/commands/environment.ts
 function createEnvironmentCommand(deps = defaultCliDeps) {
   const environmentCmd = new Command("environment").description("List, get, and create environments");
-  addSharedHelp(environmentCmd.command("list").description("List environments").requiredOption("--workspace <slug>", "Project slug").action(async function(opts) {
+  addSharedHelp(environmentCmd.command("list").description("List environments").option("--workspace <slug>", "Workspace slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      const envs = await deps.apiRequest(`/workspaces/${opts.workspace}/environments`, { token, apiUrl });
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      const envs = await deps.apiRequest(`/workspaces/${workspace}/environments`, { token, apiUrl });
       if (flags2.json)
         return output(envs, flags2);
       if (!envs.length)
@@ -2935,24 +3346,28 @@ function createEnvironmentCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["environment", "list"]);
-  addSharedHelp(environmentCmd.command("get").description("Get one environment").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").action(async function(slug, opts) {
+  addSharedHelp(environmentCmd.command("get").description("Get one environment").argument("[slug]").option("--workspace <slug>", "Workspace slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${slug}`, { token, apiUrl }), flags2);
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const envSlug = requireArgumentValue(slug, "environment slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${envSlug}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["environment", "get"]);
-  addSharedHelp(environmentCmd.command("create").description("Create an environment").requiredOption("--workspace <slug>", "Project slug").requiredOption("--slug <slug>", "Environment slug").action(async function(opts) {
+  addSharedHelp(environmentCmd.command("create").description("Create an environment").option("--workspace <slug>", "Workspace slug").option("--slug <slug>", "Environment slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const slug = requireOptionValue(opts.slug, "slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments`, {
         method: "POST",
-        body: { slug: opts.slug },
+        body: { slug },
         token,
         apiUrl
       }), flags2);
@@ -2965,17 +3380,16 @@ function createEnvironmentCommand(deps = defaultCliDeps) {
 var environmentCmd = createEnvironmentCommand();
 
 // src/commands/resource.ts
-function parseJson(value) {
-  return JSON.parse(value);
-}
 function createResourceCommand(deps = defaultCliDeps) {
   const resourceCmd = new Command("resource").description("List, inspect, and mutate resources");
-  addSharedHelp(resourceCmd.command("list").description("List resources").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
+  addSharedHelp(resourceCmd.command("list").description("List resources").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
-    const path = `/workspaces/${opts.workspace}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
     try {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      const path = `/workspaces/${workspace}/environments/${env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
       const resources = await deps.apiRequest(path, { token, apiUrl });
       if (flags2.json || opts.detailed)
         return output(resources, flags2);
@@ -2986,30 +3400,38 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "list"]);
-  addSharedHelp(resourceCmd.command("get").description("Get one resource").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--live", "Include live resource comparison").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("get").description("Get one resource").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--live", "Include live resource comparison").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
       if (!opts.live) {
-        return output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags2);
+        return output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}`, { token, apiUrl }), flags2);
       }
-      return output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags2);
+      return output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/live`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["resource", "get"]);
-  addSharedHelp(resourceCmd.command("create").description("Create one resource and immediately attempt apply").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--slug <slug>", "Resource slug").requiredOption("--type <type>", "Resource token").requiredOption("--inputs <json>", "Inputs JSON object").option("--parent <slug>", "Parent resource slug").option("--summary <text>", "Change summary").action(async function(opts) {
+  addSharedHelp(resourceCmd.command("create").description("Create one resource and immediately attempt apply").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--slug <slug>", "Resource slug").option("--type <type>", "Resource token").option("--inputs <json>", "Inputs JSON object").option("--parent <slug>", "Parent resource slug").option("--summary <text>", "Change summary").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireOptionValue(opts.slug, "slug");
+      const type = requireOptionValue(opts.type, "type");
+      const inputs = parseJsonFlag(requireOptionValue(opts.inputs, "inputs"), "inputs");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources`, {
         method: "POST",
         body: {
-          slug: opts.slug,
-          type: opts.type,
-          inputs: parseJson(opts.inputs),
+          slug: resourceSlug,
+          type,
+          inputs,
           parentSlug: opts.parent,
           summary: opts.summary
         },
@@ -3020,17 +3442,21 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "create"]);
-  addSharedHelp(resourceCmd.command("update").description("Update one resource and immediately attempt apply").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--inputs <json>", "Inputs JSON object").option("--summary <text>", "Change summary").option("--remove-input-paths <json>", "JSON array of input paths to remove").option("--parent <slug>", "New parent slug").option("--version <n>", "Optimistic-lock version").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("update").description("Update one resource and immediately attempt apply").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--inputs <json>", "Inputs JSON object").option("--summary <text>", "Change summary").option("--remove-input-paths <json>", "JSON array of input paths to remove").option("--parent <slug>", "New parent slug").option("--version <n>", "Optimistic-lock version").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const inputs = parseJsonFlag(requireOptionValue(opts.inputs, "inputs"), "inputs");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}`, {
         method: "PUT",
         body: {
-          inputs: parseJson(opts.inputs),
+          inputs,
           summary: opts.summary,
-          removeInputPaths: opts.removeInputPaths ? parseJson(opts.removeInputPaths) : undefined,
+          removeInputPaths: opts.removeInputPaths ? parseJsonFlag(opts.removeInputPaths, "remove-input-paths") : undefined,
           parentSlug: opts.parent,
           version: opts.version ? Number(opts.version) : undefined
         },
@@ -3041,13 +3467,16 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "update"]);
-  addSharedHelp(resourceCmd.command("delete").description("Delete one resource and immediately attempt apply").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--recursive", "Delete descendants too").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("delete").description("Delete one resource and immediately attempt apply").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--recursive", "Delete descendants too").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
       const query = opts.recursive ? "?recursive=true" : "";
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}${query}`, {
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}${query}`, {
         method: "DELETE",
         token,
         apiUrl
@@ -3056,22 +3485,28 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "delete"]);
-  addSharedHelp(resourceCmd.command("diff").description("Diff one resource").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("diff").description("Diff one resource").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/diff`, { token, apiUrl }), flags2);
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/diff`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["resource", "diff"]);
-  addSharedHelp(resourceCmd.command("refresh").description("Refresh one resource").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("refresh").description("Refresh one resource").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/sync`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/sync`, {
         method: "POST",
         token,
         apiUrl
@@ -3080,12 +3515,15 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "refresh"]);
-  addSharedHelp(resourceCmd.command("accept-live").description("Accept live state for one resource").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("accept-live").description("Accept live state for one resource").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/accept-live`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/accept-live`, {
         method: "POST",
         token,
         apiUrl
@@ -3094,12 +3532,15 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "accept-live"]);
-  addSharedHelp(resourceCmd.command("reconcile").description("Promote desired state through a change").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("reconcile").description("Promote desired state through a change").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/promote-current`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/promote-current`, {
         method: "POST",
         token,
         apiUrl
@@ -3108,14 +3549,18 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "reconcile"]);
-  addSharedHelp(resourceCmd.command("restore").description("Restore one resource from an operation snapshot").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--operation <id>", "Operation id").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("restore").description("Restore one resource from an operation snapshot").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--operation <id>", "Operation id").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/restore`, {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const operation = requireOptionValue(opts.operation, "operation");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/restore`, {
         method: "POST",
-        body: { operationId: opts.operation },
+        body: { operationId: operation },
         token,
         apiUrl
       }), flags2);
@@ -3123,12 +3568,15 @@ function createResourceCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["resource", "restore"]);
-  addSharedHelp(resourceCmd.command("history").description("List history for one resource").argument("<slug>").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+  addSharedHelp(resourceCmd.command("history").description("List history for one resource").argument("[slug]").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(slug, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/resources/${slug}/history`, { token, apiUrl }), flags2);
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const resourceSlug = requireArgumentValue(slug, "resource slug");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/resources/${resourceSlug}/history`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -3138,17 +3586,16 @@ function createResourceCommand(deps = defaultCliDeps) {
 var resourceCmd = createResourceCommand();
 
 // src/commands/change.ts
-function parseJson2(value) {
-  return JSON.parse(value);
-}
 function createChangeCommand(deps = defaultCliDeps) {
   const changeCmd = new Command("change").description("List, inspect, and execute changes");
-  addSharedHelp(changeCmd.command("list").description("List changes").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
+  addSharedHelp(changeCmd.command("list").description("List changes").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      const changes = await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, { token, apiUrl });
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      const changes = await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/changes`, { token, apiUrl });
       if (flags2.json)
         return output(changes, flags2);
       if (!changes.length)
@@ -3158,27 +3605,30 @@ function createChangeCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["change", "list"]);
-  addSharedHelp(changeCmd.command("get").description("Get one change").argument("<shortId>").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("get").description("Get one change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/changes/${shortId}`, { token, apiUrl }), flags2);
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/changes/${changeShortId}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["change", "get"]);
-  addSharedHelp(changeCmd.command("create").description("Create a change").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary").action(async function(opts) {
+  addSharedHelp(changeCmd.command("create").description("Create a change").option("--workspace <slug>", "Workspace slug").option("--env <slug>", "Environment slug").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary").action(async function(opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
+      const workspace = requireOptionValue(opts.workspace, "workspace");
+      const env = requireOptionValue(opts.env, "env");
       const body = {};
       if (opts.summary)
         body.summary = opts.summary;
       if (opts.mutations)
-        body.mutations = parseJson2(opts.mutations);
-      output(await deps.apiRequest(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, {
+        body.mutations = parseJsonFlag(opts.mutations, "mutations");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/workspaces/${workspace}/environments/${env}/changes`, {
         method: "POST",
         body,
         token,
@@ -3188,14 +3638,16 @@ function createChangeCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["change", "create"]);
-  addSharedHelp(changeCmd.command("append").description("Append mutations to one change").argument("<shortId>").requiredOption("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary override").action(async function(shortId, opts) {
+  addSharedHelp(changeCmd.command("append").description("Append mutations to one change").argument("[shortId]").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary override").action(async function(shortId, opts) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/changes/${shortId}/mutations`, {
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const mutations = parseJsonFlag(requireOptionValue(opts.mutations, "mutations"), "mutations");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/changes/${changeShortId}/mutations`, {
         method: "POST",
-        body: { mutations: parseJson2(opts.mutations), summary: opts.summary },
+        body: { mutations, summary: opts.summary },
         token,
         apiUrl
       }), flags2);
@@ -3203,22 +3655,24 @@ function createChangeCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["change", "append"]);
-  addSharedHelp(changeCmd.command("preview").description("Preview one change").argument("<shortId>").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("preview").description("Preview one change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/changes/${shortId}/preview`, { method: "POST", token, apiUrl }), flags2);
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/changes/${changeShortId}/preview`, { method: "POST", token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["change", "preview"]);
-  addSharedHelp(changeCmd.command("apply").description("Apply one change").argument("<shortId>").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("apply").description("Apply one change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      const result = await deps.apiRequest(`/changes/${shortId}/apply`, { method: "POST", token, apiUrl });
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      const result = await deps.apiRequest(`/changes/${changeShortId}/apply`, { method: "POST", token, apiUrl });
       if (flags2.json)
         return output(result, flags2);
       if (result.approvalRequired) {
@@ -3231,22 +3685,24 @@ function createChangeCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["change", "apply"]);
-  addSharedHelp(changeCmd.command("discard").description("Discard one change").argument("<shortId>").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("discard").description("Discard one change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/changes/${shortId}/dismiss`, { method: "POST", token, apiUrl }), flags2);
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/changes/${changeShortId}/dismiss`, { method: "POST", token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
   }), ["change", "discard"]);
-  addSharedHelp(changeCmd.command("retry").description("Retry one failed change").argument("<shortId>").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("retry").description("Retry one failed change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/changes/${shortId}/retry`, { method: "POST", token, apiUrl }), flags2);
+      const changeShortId = requireArgumentValue(shortId, "change shortId");
+      const token = deps.getToken(flags2);
+      const apiUrl = deps.getApiUrl(flags2);
+      output(await deps.apiRequest(`/changes/${changeShortId}/retry`, { method: "POST", token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -3256,7 +3712,7 @@ function createChangeCommand(deps = defaultCliDeps) {
 var changeCmd = createChangeCommand();
 
 // src/commands/provider.ts
-function parseJson3(value) {
+function parseJson(value) {
   return JSON.parse(value);
 }
 function createProviderCommand(deps = defaultCliDeps) {
@@ -3293,7 +3749,7 @@ function createProviderCommand(deps = defaultCliDeps) {
     try {
       output(await deps.apiRequest("/providers", {
         method: "POST",
-        body: { providerPkg: opts.provider, profileName: opts.name, config: parseJson3(opts.config) },
+        body: { providerPkg: opts.provider, profileName: opts.name, config: parseJson(opts.config) },
         token,
         apiUrl
       }), flags2);
@@ -3402,8 +3858,8 @@ function formatSupportedDiscoveryProviders() {
 ${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
 `)}`;
 }
-function getRootFlags2(command) {
-  let current = command;
+function getRootFlags2(command2) {
+  let current = command2;
   while (current.parent)
     current = current.parent;
   return current.opts();
@@ -3436,7 +3892,7 @@ function addProviderDiscoveryCommands(discoveryCmd, deps, config) {
   providerCmd2.action(function() {
     deps.log(this.helpInformation());
   });
-  providerCmd2.command("types").description(`List ${config.label} resource types that support discovery`).requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
+  providerCmd2.command("types").description(`List ${config.label} resource types that support discovery`).requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3454,7 +3910,7 @@ function addProviderDiscoveryCommands(discoveryCmd, deps, config) {
       handleCliError2(error, deps);
     }
   });
-  providerCmd2.command("list").description(`List existing ${config.label} resources`).requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--type <type>", config.typeHelp).option("--location <location>", "Filter by discovery location").option("--region <region>", "AWS-only alias for --location").option("--profile <profileId>", `Use a specific ${config.label} provider profile`).action(async function(opts) {
+  providerCmd2.command("list").description(`List existing ${config.label} resources`).requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--type <type>", config.typeHelp).option("--location <location>", "Filter by discovery location").option("--region <region>", "AWS-only alias for --location").option("--profile <profileId>", `Use a specific ${config.label} provider profile`).action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3483,7 +3939,7 @@ function addProviderDiscoveryCommands(discoveryCmd, deps, config) {
       handleCliError2(error, deps);
     }
   });
-  providerCmd2.command("inspect").description(`Inspect a single ${config.label} resource`).requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription).requiredOption("--type <type>", "Pulumi token or discovery type").option("--profile <profileId>", `Use a specific ${config.label} provider profile`).action(async function(opts) {
+  providerCmd2.command("inspect").description(`Inspect a single ${config.label} resource`).requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription).requiredOption("--type <type>", "Pulumi token or discovery type").option("--profile <profileId>", `Use a specific ${config.label} provider profile`).action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3500,7 +3956,7 @@ function addProviderDiscoveryCommands(discoveryCmd, deps, config) {
       handleCliError2(error, deps);
     }
   });
-  providerCmd2.command("import").description(`Import discovered ${config.label} resources`).requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--items <json>", "JSON array of {providerId, type, slug, importId?}").action(async function(opts) {
+  providerCmd2.command("import").description(`Import discovered ${config.label} resources`).requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--items <json>", "JSON array of {providerId, type, slug, importId?}").action(async function(opts) {
     const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3545,8 +4001,8 @@ var defaultDeps2 = {
   error: (message) => console.error(message),
   exit: (code) => process.exit(code)
 };
-function getRootFlags3(command) {
-  let current = command;
+function getRootFlags3(command2) {
+  let current = command2;
   while (current.parent)
     current = current.parent;
   return current.opts();
@@ -3591,11 +4047,11 @@ function parseJsonArray(value, flag) {
   }
   return parsed;
 }
-function applyCatalogHelp(command, path) {
+function applyCatalogHelp(command2, path) {
   const entry = findObserveCommandHelp("aws", path);
   if (!entry)
     return;
-  command.description(entry.purpose);
+  command2.description(entry.purpose);
   const notes = entry.notes?.length ? `
 Notes:
 ${entry.notes.map((note) => `  ${note}`).join(`
@@ -3604,7 +4060,7 @@ ${entry.notes.map((note) => `  ${note}`).join(`
 Examples:
 ${entry.examples.map((example) => `  ${example}`).join(`
 `)}` : "";
-  command.addHelpText("after", `
+  command2.addHelpText("after", `
 ${entry.synopsis}${notes}${examples}`);
 }
 function printLogEvents(deps, events) {
@@ -3636,7 +4092,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   logsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const groupsCmd = new Command("groups").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const groupsCmd = new Command("groups").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3667,7 +4123,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(groupsCmd, ["logs", "groups"]);
   logsCmd.addCommand(groupsCmd);
-  const tailCmd = new Command("tail").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
+  const tailCmd = new Command("tail").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3692,7 +4148,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(tailCmd, ["logs", "tail"]);
   logsCmd.addCommand(tailCmd);
-  const eventsCmd = new Command("events").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const eventsCmd = new Command("events").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3718,7 +4174,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(eventsCmd, ["logs", "events"]);
   logsCmd.addCommand(eventsCmd);
-  const queryCmd = new Command("query").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
+  const queryCmd = new Command("query").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3757,7 +4213,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   metricsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const metricsListCmd = new Command("list").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const metricsListCmd = new Command("list").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3790,7 +4246,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(metricsListCmd, ["metrics", "list"]);
   metricsCmd.addCommand(metricsListCmd);
-  const metricsQueryCmd = new Command("query").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
+  const metricsQueryCmd = new Command("query").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3829,7 +4285,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   alarmsCmd.action(function() {
     deps.log(this.helpInformation());
   });
-  const alarmsListCmd = new Command("list").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const alarmsListCmd = new Command("list").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3862,7 +4318,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(alarmsListCmd, ["alarms", "list"]);
   alarmsCmd.addCommand(alarmsListCmd);
-  const alarmsDetailCmd = new Command("detail").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
+  const alarmsDetailCmd = new Command("detail").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3880,7 +4336,7 @@ ${getObserveProviderHelpMessage("aws")}`);
   });
   applyCatalogHelp(alarmsDetailCmd, ["alarms", "detail"]);
   alarmsCmd.addCommand(alarmsDetailCmd);
-  const alarmsHistoryCmd = new Command("history").requiredOption("--workspace <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
+  const alarmsHistoryCmd = new Command("history").requiredOption("--workspace <slug>", "Workspace slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
     const flags2 = getRootFlags3(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
@@ -3928,9 +4384,32 @@ function getCliVersion() {
     return "0.0.0";
   }
 }
+function mapCommanderMessage(message, commandPath) {
+  if (message.includes("required option '--workspace")) {
+    return "Missing --workspace.";
+  }
+  if (message.includes("required option '--env")) {
+    return "Missing --env.";
+  }
+  if (message.includes("missing required argument 'slug'")) {
+    if (commandPath[0] === "resource") {
+      return "Missing resource slug.";
+    }
+    if (commandPath[0] === "environment") {
+      return "Missing environment slug.";
+    }
+    if (commandPath[0] === "workspace") {
+      return "Missing workspace slug.";
+    }
+  }
+  if (message.includes("missing required argument 'shortId'")) {
+    return "Missing change shortId.";
+  }
+  return message.replace(/^error:\s*/i, "");
+}
 var program2 = new Command().name("opsy").description("Opsy CLI — Agent-to-Infrastructure control plane").version(getCliVersion()).option("--token <pat>", "Personal Access Token (env: OPSY_TOKEN)").option("--api-url <url>", "API URL (env: OPSY_API_URL)").option("--json", "Output JSON").option("--quiet", "Minimal output");
 program2.addCommand(authCmd);
-program2.addCommand(projectCmd);
+program2.addCommand(workspaceCmd);
 program2.addCommand(environmentCmd);
 program2.addCommand(resourceCmd);
 program2.addCommand(changeCmd);
@@ -3942,4 +4421,28 @@ program2.addCommand(feedbackCmd);
 program2.configureHelp({
   formatHelp: () => renderCommandHelp([])
 });
-program2.parse();
+program2.configureOutput({
+  writeErr: () => {},
+  outputError: () => {}
+});
+program2.exitOverride();
+async function main() {
+  try {
+    await program2.parseAsync(process.argv);
+  } catch (error) {
+    if (error instanceof CommanderError) {
+      if (error.code === "commander.helpDisplayed" || error.code === "commander.version") {
+        return;
+      }
+      const parsed = parseCommandString(process.argv.slice(2).join(" "));
+      const commandPath = normalizeCommandPath(parsed.positionals);
+      const message2 = renderCommandErrorMessage(mapCommanderMessage(error.message, commandPath));
+      console.error(`Error: ${message2}`);
+      process.exit(error.exitCode ?? 1);
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
+    process.exit(1);
+  }
+}
+main();

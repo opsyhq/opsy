@@ -1,10 +1,15 @@
 import { Command } from "commander";
-import { addSharedHelp, defaultCliDeps, getRootFlags, handleCliError, type CliDeps } from "./common";
+import {
+  addSharedHelp,
+  defaultCliDeps,
+  getRootFlags,
+  handleCliError,
+  parseJsonFlag,
+  requireArgumentValue,
+  requireOptionValue,
+  type CliDeps,
+} from "./common";
 import { formatTable, output } from "../output";
-
-function parseJson(value: string) {
-  return JSON.parse(value);
-}
 
 export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   const changeCmd = new Command("change").description("List, inspect, and execute changes");
@@ -12,14 +17,19 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("list")
       .description("List changes")
-      .requiredOption("--workspace <slug>", "Project slug")
-      .requiredOption("--env <slug>", "Environment slug")
-      .action(async function (this: Command, opts: { workspace: string; env: string }) {
+      .option("--workspace <slug>", "Workspace slug")
+      .option("--env <slug>", "Environment slug")
+      .action(async function (this: Command, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          const changes = await deps.apiRequest<any[]>(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, { token, apiUrl });
+          const workspace = requireOptionValue(opts.workspace, "workspace");
+          const env = requireOptionValue(opts.env, "env");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          const changes = await deps.apiRequest<any[]>(
+            `/workspaces/${workspace}/environments/${env}/changes`,
+            { token, apiUrl },
+          );
           if (flags.json) return output(changes, flags);
           if (!changes.length) return deps.log("No changes found.");
           deps.log(formatTable(
@@ -36,13 +46,14 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("get")
       .description("Get one change")
-      .argument("<shortId>")
-      .action(async function (this: Command, shortId: string) {
+      .argument("[shortId]")
+      .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/changes/${shortId}`, { token, apiUrl }), flags);
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/changes/${changeShortId}`, { token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -53,19 +64,23 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("create")
       .description("Create a change")
-      .requiredOption("--workspace <slug>", "Project slug")
-      .requiredOption("--env <slug>", "Environment slug")
+      .option("--workspace <slug>", "Workspace slug")
+      .option("--env <slug>", "Environment slug")
       .option("--mutations <json>", "Mutation array")
       .option("--summary <text>", "Change summary")
-      .action(async function (this: Command, opts: { workspace: string; env: string; mutations?: string; summary?: string }) {
+      .action(async function (this: Command, opts: { workspace?: string; env?: string; mutations?: string; summary?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
+          const workspace = requireOptionValue(opts.workspace, "workspace");
+          const env = requireOptionValue(opts.env, "env");
           const body: Record<string, unknown> = {};
           if (opts.summary) body.summary = opts.summary;
-          if (opts.mutations) body.mutations = parseJson(opts.mutations);
-          output(await deps.apiRequest<any>(`/workspaces/${opts.workspace}/environments/${opts.env}/changes`, {
+          if (opts.mutations) body.mutations = parseJsonFlag(opts.mutations, "mutations");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(
+            `/workspaces/${workspace}/environments/${env}/changes`,
+            {
             method: "POST",
             body,
             token,
@@ -81,17 +96,19 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("append")
       .description("Append mutations to one change")
-      .argument("<shortId>")
-      .requiredOption("--mutations <json>", "Mutation array")
+      .argument("[shortId]")
+      .option("--mutations <json>", "Mutation array")
       .option("--summary <text>", "Change summary override")
-      .action(async function (this: Command, shortId: string, opts: { mutations: string; summary?: string }) {
+      .action(async function (this: Command, shortId: string | undefined, opts: { mutations?: string; summary?: string }) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/changes/${shortId}/mutations`, {
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const mutations = parseJsonFlag(requireOptionValue(opts.mutations, "mutations"), "mutations");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/changes/${changeShortId}/mutations`, {
             method: "POST",
-            body: { mutations: parseJson(opts.mutations), summary: opts.summary },
+            body: { mutations, summary: opts.summary },
             token,
             apiUrl,
           }), flags);
@@ -105,13 +122,14 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("preview")
       .description("Preview one change")
-      .argument("<shortId>")
-      .action(async function (this: Command, shortId: string) {
+      .argument("[shortId]")
+      .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/changes/${shortId}/preview`, { method: "POST", token, apiUrl }), flags);
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/changes/${changeShortId}/preview`, { method: "POST", token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -122,13 +140,14 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("apply")
       .description("Apply one change")
-      .argument("<shortId>")
-      .action(async function (this: Command, shortId: string) {
+      .argument("[shortId]")
+      .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          const result = await deps.apiRequest<any>(`/changes/${shortId}/apply`, { method: "POST", token, apiUrl });
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          const result = await deps.apiRequest<any>(`/changes/${changeShortId}/apply`, { method: "POST", token, apiUrl });
           if (flags.json) return output(result, flags);
           if (result.approvalRequired) {
             deps.log(`Manual approval required for change ${result.change.shortId}.`);
@@ -146,13 +165,14 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("discard")
       .description("Discard one change")
-      .argument("<shortId>")
-      .action(async function (this: Command, shortId: string) {
+      .argument("[shortId]")
+      .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/changes/${shortId}/dismiss`, { method: "POST", token, apiUrl }), flags);
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/changes/${changeShortId}/dismiss`, { method: "POST", token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -163,13 +183,14 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   addSharedHelp(
     changeCmd.command("retry")
       .description("Retry one failed change")
-      .argument("<shortId>")
-      .action(async function (this: Command, shortId: string) {
+      .argument("[shortId]")
+      .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
-        const token = deps.getToken(flags);
-        const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/changes/${shortId}/retry`, { method: "POST", token, apiUrl }), flags);
+          const changeShortId = requireArgumentValue(shortId, "change shortId");
+          const token = deps.getToken(flags);
+          const apiUrl = deps.getApiUrl(flags);
+          output(await deps.apiRequest<any>(`/changes/${changeShortId}/retry`, { method: "POST", token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }
