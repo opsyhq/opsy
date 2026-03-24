@@ -3,7 +3,7 @@ export type Paginated<T> = { items: T[]; nextCursor: string | null };
 export * from "./observe";
 export * from "./commands";
 
-export type DiscoveryProviderId = "aws";
+export type DiscoveryProviderId = "aws" | "cloudflare";
 
 export type DiscoveryProviderSummary = {
   id: DiscoveryProviderId;
@@ -12,6 +12,7 @@ export type DiscoveryProviderSummary = {
 
 export const DISCOVERY_PROVIDERS: DiscoveryProviderSummary[] = [
   { id: "aws", label: "AWS" },
+  { id: "cloudflare", label: "Cloudflare" },
 ];
 
 export function getUnsupportedDiscoveryProviderMessage(provider: string): string {

@@ -7,14 +7,14 @@ description: Use when working with Opsy to manage infrastructure — inspecting 
 
 ## When to use
 
-Use this skill for tasks involving Opsy workspaces, environments, resources, changes, executions, discovery, observe flows, or schema inspection.
+Use this skill for tasks involving Opsy projects, environments, resources, changes, executions, discovery, observability flows, or schema inspection.
 
 ## MCP vs CLI
 
 - **MCP** — preferred for interactive workflows (inspect, edit, validate, apply in one session)
 - **CLI** — use when MCP is unavailable or for one-shot commands and scripts
-- Use `observe` when the task is operational troubleshooting: logs, metrics, alarms, or recent runtime signals.
-- CLI and MCP now share the same verb-first grammar through the single `opsy` surface.
+- Use `observability` when the task is operational troubleshooting: logs, metrics, alarms, or recent runtime signals.
+- CLI and MCP now share the same noun-first grammar through the single `opsy` surface.
 
 ## Workflow
 

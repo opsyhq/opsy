@@ -16,7 +16,7 @@ type GlobalFlags = {
   quiet?: boolean;
 };
 
-type ObserveDeps = {
+type ObservabilityDeps = {
   apiRequest: typeof apiRequest;
   getToken: typeof getToken;
   getApiUrl: typeof getApiUrl;
@@ -25,7 +25,7 @@ type ObserveDeps = {
   exit: (code: number) => never;
 };
 
-const defaultDeps: ObserveDeps = {
+const defaultDeps: ObservabilityDeps = {
   apiRequest,
   getToken,
   getApiUrl,
@@ -63,7 +63,7 @@ function isQueryTimeoutDetails(value: unknown): value is {
   );
 }
 
-function handleCliError(error: unknown, deps: ObserveDeps, flags?: GlobalFlags): never {
+function handleCliError(error: unknown, deps: ObservabilityDeps, flags?: GlobalFlags): never {
   if (flags?.json && error instanceof ApiRequestError) {
     output(error.body, flags);
     return deps.exit(1);
@@ -101,7 +101,7 @@ function applyCatalogHelp(command: Command, path: string[]) {
 }
 
 function printLogEvents(
-  deps: ObserveDeps,
+  deps: ObservabilityDeps,
   events: Array<{ timestamp: string; logStreamName: string | null; message: string }>,
 ) {
   if (!events.length) {
@@ -111,16 +111,16 @@ function printLogEvents(
   deps.log(events.map((event) => `[${event.timestamp}] ${event.logStreamName ?? "-"} ${event.message}`).join("\n"));
 }
 
-export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
-  const observeCmd = new Command("observe")
+export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps) {
+  const observabilityCmd = new Command("observability")
     .description("Provider-scoped logs, metrics, and alarms")
     .argument("[provider]")
     .argument("[args...]");
 
-  observeCmd.action((provider?: string) => {
+  observabilityCmd.action((provider?: string) => {
     if (!provider) {
       deps.log(renderObserveSupportedProviders());
-      deps.log('Use "opsy observe aws --help" for AWS observe commands.');
+      deps.log('Use "opsy observability aws --help" for AWS observability commands.');
       return;
     }
 
@@ -141,7 +141,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   });
 
   const groupsCmd = new Command("groups")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -192,7 +192,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   logsCmd.addCommand(groupsCmd);
 
   const tailCmd = new Command("tail")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-group <name>", "Log group name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -229,7 +229,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   logsCmd.addCommand(tailCmd);
 
   const eventsCmd = new Command("events")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-group <name>", "Log group name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -268,7 +268,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   logsCmd.addCommand(eventsCmd);
 
   const queryCmd = new Command("query")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--log-groups <csv>", "Comma-separated log groups")
     .requiredOption("--query-string <text>", "Logs Insights query")
@@ -326,7 +326,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   });
 
   const metricsListCmd = new Command("list")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -375,7 +375,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   metricsCmd.addCommand(metricsListCmd);
 
   const metricsQueryCmd = new Command("query")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--queries <json-array>", "JSON array of MetricDataQueries")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -432,7 +432,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   });
 
   const alarmsListCmd = new Command("list")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
     .option("--region <aws-region>", "Override the AWS region")
@@ -479,7 +479,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   alarmsCmd.addCommand(alarmsListCmd);
 
   const alarmsDetailCmd = new Command("detail")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -505,7 +505,7 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   alarmsCmd.addCommand(alarmsDetailCmd);
 
   const alarmsHistoryCmd = new Command("history")
-    .requiredOption("--workspace <slug>", "Workspace slug")
+    .requiredOption("--workspace <slug>", "Project slug")
     .requiredOption("--env <slug>", "Environment slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
     .option("--profile <profileId>", "Use a specific AWS provider profile")
@@ -553,8 +553,8 @@ export function createObserveCommand(deps: ObserveDeps = defaultDeps) {
   alarmsCmd.addCommand(alarmsHistoryCmd);
   awsCmd.addCommand(alarmsCmd);
 
-  observeCmd.addCommand(awsCmd);
-  return observeCmd;
+  observabilityCmd.addCommand(awsCmd);
+  return observabilityCmd;
 }
 
-export const observeCmd = createObserveCommand();
+export const observabilityCmd = createObservabilityCommand();

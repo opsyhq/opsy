@@ -10,6 +10,6 @@
     "test": "bun run --cwd packages/cli test",
     "pack:check": "bun run --cwd packages/cli pack:check",
     "docs:check": "grep -q 'npm install -g @opsyhq/opsy' README.md && ! grep -R -E 'opsy (workspace|stack|draft|revision|run|org)\\b' README.md skills/opsy/references/commands.md",
-    "smoke": "node packages/cli/dist/bin.js --help >/dev/null && node packages/cli/dist/bin.js discover --help >/dev/null && node packages/cli/dist/bin.js observe aws --help >/dev/null"
+    "smoke": "node packages/cli/dist/bin.js --help >/dev/null && node packages/cli/dist/bin.js discovery --help >/dev/null && node packages/cli/dist/bin.js observability aws --help >/dev/null"
   }
 }

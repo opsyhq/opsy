@@ -3,25 +3,15 @@ import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { authCmd } from "./commands/auth";
 import { renderCommandHelp } from "@opsy/contracts";
-import { listCmd } from "./commands/list";
-import { getCmd } from "./commands/get";
-import { createCmd } from "./commands/create";
-import { updateCmd } from "./commands/update";
-import { deleteCmd } from "./commands/delete";
-import { applyCmd } from "./commands/apply";
-import { planCmd } from "./commands/plan";
-import { dismissCmd } from "./commands/dismiss";
-import { appendCmd } from "./commands/append";
-import { retryCmd } from "./commands/retry";
-import { refreshCmd } from "./commands/refresh";
-import { diffCmd } from "./commands/diff";
-import { acceptCmd } from "./commands/accept";
-import { pushCmd } from "./commands/push";
-import { restoreCmd } from "./commands/restore";
-import { historyCmd } from "./commands/history";
+import { projectCmd } from "./commands/project";
+import { environmentCmd } from "./commands/environment";
+import { resourceCmd } from "./commands/resource";
+import { changeCmd } from "./commands/change";
+import { providerCmd } from "./commands/provider";
+import { schemaCmd } from "./commands/schema";
 import { feedbackCmd } from "./commands/feedback";
-import { discoverCmd } from "./commands/discover";
-import { observeCmd } from "./commands/observe";
+import { discoveryCmd } from "./commands/discovery";
+import { observabilityCmd } from "./commands/observability";
 
 function getCliVersion(): string {
   try {
@@ -42,24 +32,14 @@ const program = new Command()
   .option("--quiet", "Minimal output");
 
 program.addCommand(authCmd);
-program.addCommand(listCmd);
-program.addCommand(getCmd);
-program.addCommand(createCmd);
-program.addCommand(updateCmd);
-program.addCommand(deleteCmd);
-program.addCommand(applyCmd);
-program.addCommand(planCmd);
-program.addCommand(dismissCmd);
-program.addCommand(appendCmd);
-program.addCommand(retryCmd);
-program.addCommand(refreshCmd);
-program.addCommand(diffCmd);
-program.addCommand(acceptCmd);
-program.addCommand(pushCmd);
-program.addCommand(restoreCmd);
-program.addCommand(historyCmd);
-program.addCommand(discoverCmd);
-program.addCommand(observeCmd);
+program.addCommand(projectCmd);
+program.addCommand(environmentCmd);
+program.addCommand(resourceCmd);
+program.addCommand(changeCmd);
+program.addCommand(providerCmd);
+program.addCommand(schemaCmd);
+program.addCommand(discoveryCmd);
+program.addCommand(observabilityCmd);
 program.addCommand(feedbackCmd);
 program.configureHelp({
   formatHelp: () => renderCommandHelp([]),

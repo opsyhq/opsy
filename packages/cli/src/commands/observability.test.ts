@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { Command } from "commander";
 import { ApiRequestError } from "../client";
-import { createObserveCommand } from "./observe";
+import { createObservabilityCommand } from "./observability";
 
-function createProgram(command = createObserveCommand({
+function createProgram(command = createObservabilityCommand({
   apiRequest: async () => ({}),
   getToken: () => "test-token",
   getApiUrl: () => "http://localhost:4000",
@@ -24,7 +24,7 @@ function createProgram(command = createObserveCommand({
   return program;
 }
 
-describe("observe CLI command", () => {
+describe("observability CLI command", () => {
   const originalConsoleLog = console.log;
   const originalConsoleError = console.error;
 
@@ -33,9 +33,9 @@ describe("observe CLI command", () => {
     console.error = originalConsoleError;
   });
 
-  test("top-level observe prints supported providers", async () => {
+  test("top-level observability prints supported providers", async () => {
     const logs: string[] = [];
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async () => ({}),
       getToken: () => "test-token",
       getApiUrl: () => "http://localhost:4000",
@@ -46,14 +46,14 @@ describe("observe CLI command", () => {
       }) as any,
     }));
 
-    await program.parseAsync(["node", "opsy", "observe"], { from: "node" });
-    expect(logs.join("\n")).toContain("Supported observe providers");
+    await program.parseAsync(["node", "opsy", "observability"], { from: "node" });
+    expect(logs.join("\n")).toContain("Supported observability providers");
     expect(logs.join("\n")).toContain("aws");
   });
 
   test("logs groups hits the expected REST path", async () => {
     const paths: string[] = [];
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async (path: string) => {
         paths.push(path);
         return { items: [] };
@@ -68,7 +68,7 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observe", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod", "--name-prefix", "/aws/lambda/"],
+      ["node", "opsy", "observability", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod", "--name-prefix", "/aws/lambda/"],
       { from: "node" },
     );
 
@@ -79,7 +79,7 @@ describe("observe CLI command", () => {
 
   test("metrics query posts the expected body", async () => {
     const calls: Array<{ path: string; body: unknown }> = [];
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async (path: string, opts: any) => {
         calls.push({ path, body: opts.body });
         return { results: [] };
@@ -94,7 +94,7 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observe", "aws", "metrics", "query", "--workspace", "acme", "--env", "prod", "--queries", "[{\"Id\":\"cpu\"}]"],
+      ["node", "opsy", "observability", "aws", "metrics", "query", "--workspace", "acme", "--env", "prod", "--queries", "[{\"Id\":\"cpu\"}]"],
       { from: "node" },
     );
 
@@ -118,7 +118,7 @@ describe("observe CLI command", () => {
       printed.push(String(message ?? ""));
     };
 
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async () => ({ provider: "aws", items: [{ name: "/aws/lambda/app" }] }),
       getToken: () => "test-token",
       getApiUrl: () => "http://localhost:4000",
@@ -130,7 +130,7 @@ describe("observe CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "--json", "observe", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod"],
+      ["node", "opsy", "--json", "observability", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod"],
       { from: "node" },
     );
 
@@ -139,7 +139,7 @@ describe("observe CLI command", () => {
   });
 
   test("help text comes from the shared catalog", () => {
-    const command = createObserveCommand();
+    const command = createObservabilityCommand();
     const aws = command.commands.find((entry) => entry.name() === "aws");
     const logs = aws?.commands.find((entry) => entry.name() === "logs");
     const groups = logs?.commands.find((entry) => entry.name() === "groups");
@@ -153,13 +153,13 @@ describe("observe CLI command", () => {
       },
     });
     groups?.outputHelp();
-    expect(written).toContain("observe aws logs groups");
+    expect(written).toContain("observability aws logs groups");
     expect(written).toContain("Examples:");
   });
 
   test("logs query surfaces timeout guidance in stderr", async () => {
     const errors: string[] = [];
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async () => {
         throw new ApiRequestError(400, {
           isError: true,
@@ -183,7 +183,7 @@ describe("observe CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "observe", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "observability", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 
@@ -198,7 +198,7 @@ describe("observe CLI command", () => {
       printed.push(String(message ?? ""));
     };
 
-    const program = createProgram(createObserveCommand({
+    const program = createProgram(createObservabilityCommand({
       apiRequest: async () => {
         throw new ApiRequestError(400, {
           isError: true,
@@ -222,7 +222,7 @@ describe("observe CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "--json", "observe", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "--json", "observability", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 

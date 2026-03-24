@@ -33,5 +33,5 @@ export function getToken(flags: { token?: string }): string {
 }
 
 export function getApiUrl(flags: { apiUrl?: string }): string {
-  return flags.apiUrl ?? process.env.OPSY_API_URL ?? loadConfig().apiUrl ?? "http://localhost:4000";
+  return flags.apiUrl ?? process.env.OPSY_API_URL ?? loadConfig().apiUrl ?? "https://api.opsy.sh";
 }
