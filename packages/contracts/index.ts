@@ -367,31 +367,6 @@ export type AgentProfile = {
   avatarSeed: string;
 };
 
-export type PersonalAgentKind = "mcp_client" | "manual";
-
-export type PersonalAgentRecord = {
-  id: string;
-  userId: string;
-  name: string;
-  kind: PersonalAgentKind;
-  clientAppKey: string | null;
-  isDefaultManual: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type PersonalAgentListResponse = {
-  items: PersonalAgentRecord[];
-};
-
-export type CreatePersonalAgentInput = {
-  name: string;
-};
-
-export type UpdatePersonalAgentInput = {
-  name: string;
-};
-
 export type UpdateAgentProfileInput = {
   name: string;
 };
@@ -424,16 +399,6 @@ export const meRoutes = {
   personalAccessTokens: "/me/pats",
   personalAccessToken(tokenId: string) {
     return `/me/pats/${tokenId}`;
-  },
-  personalAgents: "/me/personal-agents",
-  personalAgent(personalAgentId: string) {
-    return `/me/personal-agents/${personalAgentId}`;
-  },
-  personalAgentTokens(personalAgentId: string) {
-    return `/me/personal-agents/${personalAgentId}/tokens`;
-  },
-  personalAgentToken(personalAgentId: string, tokenId: string) {
-    return `/me/personal-agents/${personalAgentId}/tokens/${tokenId}`;
   },
 } as const;
 
