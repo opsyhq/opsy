@@ -2,12 +2,23 @@
 import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { authCmd } from "./commands/auth";
-import { projectCmd } from "./commands/project";
-import { envCmd } from "./commands/env";
-import { resourceCmd } from "./commands/resource";
-import { changeCmd } from "./commands/change";
-import { schemaCmd } from "./commands/schema";
-import { providerCmd } from "./commands/provider";
+import { renderCommandHelp } from "@opsy/contracts";
+import { listCmd } from "./commands/list";
+import { getCmd } from "./commands/get";
+import { createCmd } from "./commands/create";
+import { updateCmd } from "./commands/update";
+import { deleteCmd } from "./commands/delete";
+import { applyCmd } from "./commands/apply";
+import { planCmd } from "./commands/plan";
+import { dismissCmd } from "./commands/dismiss";
+import { appendCmd } from "./commands/append";
+import { retryCmd } from "./commands/retry";
+import { refreshCmd } from "./commands/refresh";
+import { diffCmd } from "./commands/diff";
+import { acceptCmd } from "./commands/accept";
+import { pushCmd } from "./commands/push";
+import { restoreCmd } from "./commands/restore";
+import { historyCmd } from "./commands/history";
 import { feedbackCmd } from "./commands/feedback";
 import { discoverCmd } from "./commands/discover";
 import { observeCmd } from "./commands/observe";
@@ -31,14 +42,27 @@ const program = new Command()
   .option("--quiet", "Minimal output");
 
 program.addCommand(authCmd);
-program.addCommand(projectCmd);
-program.addCommand(envCmd);
-program.addCommand(resourceCmd);
-program.addCommand(changeCmd);
-program.addCommand(schemaCmd);
+program.addCommand(listCmd);
+program.addCommand(getCmd);
+program.addCommand(createCmd);
+program.addCommand(updateCmd);
+program.addCommand(deleteCmd);
+program.addCommand(applyCmd);
+program.addCommand(planCmd);
+program.addCommand(dismissCmd);
+program.addCommand(appendCmd);
+program.addCommand(retryCmd);
+program.addCommand(refreshCmd);
+program.addCommand(diffCmd);
+program.addCommand(acceptCmd);
+program.addCommand(pushCmd);
+program.addCommand(restoreCmd);
+program.addCommand(historyCmd);
 program.addCommand(discoverCmd);
 program.addCommand(observeCmd);
-program.addCommand(providerCmd);
 program.addCommand(feedbackCmd);
+program.configureHelp({
+  formatHelp: () => renderCommandHelp([]),
+});
 
 program.parse();

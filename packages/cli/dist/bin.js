@@ -2224,611 +2224,12 @@ authCmd.command("whoami").description("Show current user").action(async function
   }
 });
 
-// src/commands/project.ts
-init_config();
-init_client();
-
-// src/output.ts
-function formatTable(headers, rows) {
-  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
-  const sep = widths.map((w) => "-".repeat(w)).join("  ");
-  const head = headers.map((h, i) => h.padEnd(widths[i])).join("  ");
-  const body = rows.map((r) => r.map((c, i) => (c ?? "").padEnd(widths[i])).join("  ")).join(`
-`);
-  return `${head}
-${sep}
-${body}`;
-}
-function output(data, flags) {
-  if (flags.json) {
-    console.log(JSON.stringify(data, null, 2));
-  } else if (flags.quiet) {
-    if (typeof data === "string")
-      console.log(data);
-    else if (data && typeof data === "object" && "id" in data)
-      console.log(data.id);
-    else if (data && typeof data === "object" && "shortId" in data)
-      console.log(data.shortId);
-  } else {
-    console.log(data);
-  }
-}
-
-// src/commands/project.ts
-var projectCmd = new Command("project").description("Manage workspaces/projects");
-projectCmd.command("list").description("List projects").action(async function() {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const projects = await apiRequest("/projects", { token, apiUrl });
-    if (flags.json)
-      return output(projects, flags);
-    if (!projects.length)
-      return console.log("No projects found.");
-    console.log(formatTable(["SLUG", "NAME", "CREATED"], projects.map((p) => [p.slug, p.name, new Date(p.createdAt).toLocaleDateString()])));
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-projectCmd.command("get <slug>").description("Get project details").action(async function(slug) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const project = await apiRequest(`/projects/${slug}`, { token, apiUrl });
-    output(project, flags);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-projectCmd.command("create").description("Create a project").requiredOption("--slug <slug>", "Project slug").requiredOption("--name <name>", "Project name").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const project = await apiRequest("/projects", { method: "POST", body: { slug: opts.slug, name: opts.name }, token, apiUrl });
-    if (flags.json)
-      return output(project, flags);
-    console.log(`Project created: ${project.slug}`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/commands/env.ts
-init_config();
-init_client();
-var envCmd = new Command("env").description("Manage environments");
-envCmd.command("list").description("List environments").requiredOption("--project <slug>", "Project slug").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const envs = await apiRequest(`/projects/${opts.project}/environments`, { token, apiUrl });
-    if (flags.json)
-      return output(envs, flags);
-    if (!envs.length)
-      return console.log("No environments found.");
-    console.log(formatTable(["SLUG", "AUTO-APPLY", "CREATED"], envs.map((e) => [e.slug, e.autoApply ? "yes" : "no", new Date(e.createdAt).toLocaleDateString()])));
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-envCmd.command("get").description("Get environment details").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const env = await apiRequest(`/projects/${opts.project}/environments/${opts.env}`, { token, apiUrl });
-    output(env, flags);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-envCmd.command("create").description("Create an environment").requiredOption("--project <slug>", "Project slug").requiredOption("--slug <slug>", "Environment slug").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const env = await apiRequest(`/projects/${opts.project}/environments`, { method: "POST", body: { slug: opts.slug }, token, apiUrl });
-    if (flags.json)
-      return output(env, flags);
-    console.log(`Environment created: ${env.slug}`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/commands/resource.ts
-init_config();
-init_client();
-var defaultDeps = {
-  apiRequest,
-  getToken,
-  getApiUrl,
-  log: (message) => console.log(message),
-  error: (message) => console.error(message),
-  exit: (code) => process.exit(code)
-};
-function getRootFlags(command) {
-  let current = command;
-  while (current.parent)
-    current = current.parent;
-  return current.opts();
-}
-function handleCliError(error, deps) {
-  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-  return deps.exit(1);
-}
-function createResourceCommand(deps = defaultDeps) {
-  const resourceCmd = new Command("resource").description("Manage resources");
-  resourceCmd.command("ls").description("List resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").action(async function(opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    const qs = opts.parent ? `?parent=${opts.parent}` : "";
-    try {
-      const resources = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources${qs}`, { token, apiUrl });
-      if (flags.json)
-        return output(resources, flags);
-      if (!resources.length) {
-        deps.log("No resources found.");
-        return;
-      }
-      deps.log(formatTable(["SLUG", "TYPE", "STATUS"], resources.map((resource) => [resource.slug, resource.type, resource.status])));
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("get <slug>").description("Get resource details").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--live", "Include live cloud outputs").action(async function(slug, opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      const resource = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, { token, apiUrl });
-      if (!opts.live) {
-        output(resource, flags);
-        return;
-      }
-      try {
-        const live = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl });
-        output({ ...resource, live }, flags);
-      } catch (error) {
-        deps.error(`Warning: failed to read live outputs: ${error instanceof Error ? error.message : String(error)}`);
-        output(resource, flags);
-      }
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("sync <slug>").description("Re-read a resource from cloud and refresh conflict state").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/sync`, { method: "POST", token, apiUrl });
-      output(result, flags);
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("accept-live <slug>").description("Accept the recorded live conflict snapshot into stored inputs").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/accept-live`, { method: "POST", token, apiUrl });
-      output(result, flags);
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("promote-current <slug>").description("Create a change to push stored desired inputs back to the cloud").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/promote-current`, { method: "POST", token, apiUrl });
-      if (flags.json) {
-        output(result, flags);
-        return;
-      }
-      deps.log(`Change ${result.change.shortId} created with ${result.operations.length} operation(s).`);
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("restore <slug>").description("Create a change that restores the resource inputs captured before an operation").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--operation <id>", "Operation ID to restore from").action(async function(slug, opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/restore`, { method: "POST", body: { operationId: opts.operation }, token, apiUrl });
-      if (flags.json) {
-        output(result, flags);
-        return;
-      }
-      deps.log(`Change ${result.change.shortId} created with ${result.operations.length} operation(s).`);
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  resourceCmd.command("tree").description("Show resource tree").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--depth <n>", "Tree depth", "3").action(async function(opts) {
-    const flags = getRootFlags(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
-    try {
-      let printNode = function(node, indent) {
-        const status = node.status === "live" ? "✓" : node.status === "failed" ? "✗" : "·";
-        deps.log(`${indent}${status} ${node.slug} (${node.type}) [${node.status}]`);
-        for (const child of node.children ?? [])
-          printNode(child, indent + "  ");
-      };
-      const tree = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/tree?depth=${opts.depth}`, { token, apiUrl });
-      if (flags.json)
-        return output(tree, flags);
-      if (!tree.length) {
-        deps.log("No resources found.");
-        return;
-      }
-      for (const node of tree)
-        printNode(node, "");
-    } catch (error) {
-      handleCliError(error, deps);
-    }
-  });
-  return resourceCmd;
-}
-var resourceCmd = createResourceCommand();
-
-// src/commands/change.ts
-init_config();
-init_client();
-var changeCmd = new Command("change").description("Manage changes");
-changeCmd.command("create").description("Create a change").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--mutations <json>", "Mutations JSON array").option("--summary <text>", "Change summary").option("--apply", "Apply immediately after creating the change").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    if (opts.apply && !opts.mutations) {
-      throw new Error("--apply requires --mutations");
-    }
-    let result;
-    if (opts.mutations) {
-      const body = { mutations: JSON.parse(opts.mutations) };
-      if (opts.summary)
-        body.summary = opts.summary;
-      result = await apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, {
-        method: "POST",
-        body,
-        token,
-        apiUrl
-      });
-    } else {
-      result = await apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, {
-        method: "POST",
-        body: opts.summary ? { summary: opts.summary } : {},
-        token,
-        apiUrl
-      });
-    }
-    if (opts.apply && result.change?.shortId) {
-      const applied = await apiRequest(`/changes/${result.change.shortId}/apply`, {
-        method: "POST",
-        token,
-        apiUrl
-      });
-      result = { ...result, apply: applied };
-    }
-    if (flags.json)
-      return output(result, flags);
-    const shortId = result.change?.shortId ?? result.shortId;
-    const opCount = result.operations?.length;
-    if (typeof opCount === "number") {
-      console.log(`Change ${shortId} created with ${opCount} operation(s).`);
-    } else {
-      console.log(`Change ${shortId} created.`);
-    }
-    if (result.apply?.events) {
-      for (const event of result.apply.events) {
-        const status = event.data?.status ?? "";
-        const slug = event.data?.resourceSlug ?? "";
-        console.log(`${event.event}: ${slug} ${status}`);
-      }
-    }
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("update <shortId>").description("Append mutations to an open change").requiredOption("--mutations <json>", "Mutations JSON array").option("--summary <text>", "Change summary override").option("--apply", "Apply immediately after updating the change").action(async function(shortId, opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const body = {
-      mutations: JSON.parse(opts.mutations)
-    };
-    if (opts.summary)
-      body.summary = opts.summary;
-    let result = await apiRequest(`/changes/${shortId}/mutations`, {
-      method: "POST",
-      body,
-      token,
-      apiUrl
-    });
-    if (opts.apply) {
-      const applied = await apiRequest(`/changes/${shortId}/apply`, {
-        method: "POST",
-        token,
-        apiUrl
-      });
-      result = { ...result, apply: applied };
-    }
-    if (flags.json)
-      return output(result, flags);
-    console.log(`${result.operations.length} operation(s) added to change ${shortId}.`);
-    if (result.apply?.events) {
-      for (const event of result.apply.events) {
-        const status = event.data?.status ?? "";
-        const slug = event.data?.resourceSlug ?? "";
-        console.log(`${event.event}: ${slug} ${status}`);
-      }
-    }
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("list").description("List changes").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const changes = await apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, { token, apiUrl });
-    if (flags.json)
-      return output(changes, flags);
-    if (!changes.length)
-      return console.log("No changes found.");
-    console.log(formatTable(["SHORT-ID", "STATUS", "SUMMARY", "CREATED"], changes.map((c) => [c.shortId, c.status, c.summary ?? "-", new Date(c.createdAt).toLocaleDateString()])));
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("get <shortId>").description("Get change details").action(async function(shortId) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest(`/changes/${shortId}`, { token, apiUrl });
-    if (flags.json)
-      return output(result, flags);
-    const c = result.change;
-    console.log(`Change ${c.shortId} (${c.status})`);
-    if (c.summary)
-      console.log(`Summary: ${c.summary}`);
-    console.log(`
-Operations (${result.operations.length}):`);
-    for (const op of result.operations) {
-      console.log(`  ${op.kind.toUpperCase()} ${op.resourceSlug} (${op.resourceType}) — ${op.status}`);
-      if (op.error)
-        console.log(`    Error: ${op.error}`);
-    }
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("preview <shortId>").description("Preview a change").action(async function(shortId) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest(`/changes/${shortId}/preview`, { method: "POST", token, apiUrl });
-    if (flags.json)
-      return output(result, flags);
-    console.log(`Preview for ${shortId}:`);
-    for (const op of result.operations) {
-      const prefix = op.kind === "create" ? "+" : op.kind === "delete" ? "-" : "~";
-      console.log(`  ${prefix} ${op.resourceSlug} (${op.kind})`);
-      if (op.diff)
-        console.log(`    ${JSON.stringify(op.diff)}`);
-    }
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("apply <shortId>").description("Apply a change").action(async function(shortId) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest(`/changes/${shortId}/apply`, { method: "POST", token, apiUrl });
-    if (flags.json)
-      return output(result, flags);
-    if (result.events) {
-      for (const event of result.events) {
-        const status = event.data?.status ?? "";
-        const slug = event.data?.resourceSlug ?? "";
-        console.log(`${event.event}: ${slug} ${status}`);
-      }
-    }
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("dismiss <shortId>").description("Dismiss a change").action(async function(shortId) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest(`/changes/${shortId}/dismiss`, { method: "POST", token, apiUrl });
-    if (flags.json)
-      return output(result, flags);
-    console.log(`Change ${result.shortId} dismissed.`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-changeCmd.command("retry <shortId>").description("Retry a failed change").action(async function(shortId) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest(`/changes/${shortId}/retry`, { method: "POST", token, apiUrl });
-    if (flags.json)
-      return output(result, flags);
-    console.log(`Change ${result.shortId} retried — now ${result.status}.`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/commands/schema.ts
-init_config();
-init_client();
-var schemaCmd = new Command("schema").description("Browse resource schemas");
-schemaCmd.command("providers").description("List available providers").action(async function() {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const providers = await apiRequest("/schemas/providers", { token, apiUrl });
-    if (flags.json)
-      return output(providers, flags);
-    for (const p of providers)
-      console.log(`  ${p.name ?? p.pkg ?? p}`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-schemaCmd.command("types").description("List resource types").requiredOption("--provider <pkg>", "Provider package").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const types = await apiRequest(`/schemas/types?provider=${opts.provider}`, { token, apiUrl });
-    if (flags.json)
-      return output(types, flags);
-    for (const t of types)
-      console.log(`  ${t.token ?? t}`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-schemaCmd.command("describe").description("Describe a resource type").requiredOption("--type <token>", "Resource type token").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const desc = await apiRequest(`/schemas/describe?type=${opts.type}`, { token, apiUrl });
-    output(desc, flags);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/commands/provider.ts
-init_config();
-init_client();
-var providerCmd = new Command("provider").description("Manage provider profiles");
-providerCmd.command("list").description("List provider profiles").action(async function() {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const profiles = await apiRequest("/providers", { token, apiUrl });
-    if (flags.json)
-      return output(profiles, flags);
-    if (!profiles.length)
-      return console.log("No provider profiles.");
-    console.log(formatTable(["ID", "PROVIDER", "PROFILE"], profiles.map((p) => [p.id.slice(0, 8), p.providerPkg, p.profileName])));
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-providerCmd.command("get <id>").description("Get provider profile").action(async function(id) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const profile = await apiRequest(`/providers/${id}`, { token, apiUrl });
-    output(profile, flags);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-providerCmd.command("create").description("Create provider profile").requiredOption("--provider <pkg>", "Provider package (aws, gcp, cloudflare)").requiredOption("--name <name>", "Profile name").requiredOption("--config <json>", "Config JSON").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const config = JSON.parse(opts.config);
-    const profile = await apiRequest("/providers", {
-      method: "POST",
-      body: { providerPkg: opts.provider, profileName: opts.name, config },
-      token,
-      apiUrl
-    });
-    if (flags.json)
-      return output(profile, flags);
-    console.log(`Provider profile created: ${profile.id}`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/commands/feedback.ts
-init_config();
-init_client();
-var feedbackCmd = new Command("feedback").description("Submit feedback to the Opsy team");
-feedbackCmd.command("send").description("Send feedback, bug report, or feature request").requiredOption("--message <text>", "Feedback message (max 4000 chars)").option("--from-llm", "Indicate this feedback is being sent by an LLM").action(async function(opts) {
-  const flags = this.parent.parent.opts();
-  const token = getToken(flags);
-  const apiUrl = getApiUrl(flags);
-  try {
-    const result = await apiRequest("/feedback", {
-      method: "POST",
-      body: {
-        message: opts.message,
-        source: opts.fromLlm ? "cli_llm" : "cli"
-      },
-      token,
-      apiUrl
-    });
-    if (flags.json)
-      return output(result, flags);
-    console.log(`Feedback submitted (id: ${result.id}). Thank you!`);
-  } catch (e) {
-    console.error(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(1);
-  }
-});
-
-// src/catalog.ts
-var DISCOVERY_PROVIDERS = [
+// ../contracts/observe.ts
+var OBSERVE_PROVIDERS = [
   { id: "aws", label: "AWS" }
 ];
-function getUnsupportedDiscoveryProviderMessage(provider) {
-  return `Discovery is not implemented for "${provider}". Use manual import.`;
+function getUnsupportedObserveProviderMessage(provider) {
+  return `Observe is not implemented for "${provider}". Use "observe" to list supported providers.`;
 }
 var OBSERVE_TIME_NOTES = [
   "Time values accept ISO timestamps or relative durations like 30s, 15m, 1h, or 7d.",
@@ -2933,16 +2334,14 @@ function getObserveProviderHelpCatalog(provider) {
     return OBSERVE_AWS_HELP_CATALOG;
   return null;
 }
-function getUnsupportedObserveProviderMessage(provider) {
-  return `Observe is not implemented for "${provider}". Use "observe" to list supported providers.`;
-}
 function findObserveCommandHelp(provider, path) {
   const catalog = getObserveProviderHelpCatalog(provider);
   return catalog?.commands.find((entry) => entry.path.join(" ") === path.join(" "));
 }
 function renderObserveSupportedProviders() {
   return `Supported observe providers:
-  aws`;
+${OBSERVE_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
+`)}`;
 }
 function renderObserveProviderHelp(provider) {
   const catalog = getObserveProviderHelpCatalog(provider);
@@ -2968,11 +2367,1034 @@ ${sections.join(`
 
 `)}`;
 }
+// ../contracts/commands.ts
+function flags(...entries) {
+  return entries;
+}
+var OPSY_DISCOVERY_PROVIDERS = [{ id: "aws", label: "AWS" }];
+function getUnsupportedDiscoveryProviderMessage(provider) {
+  return `Discovery is not implemented for "${provider}". Use manual import.`;
+}
+var OPSY_DOMAIN_GUIDANCE = `
+Resources are the core primitive. Treat the resource tree as real hierarchy.
 
+Mutation format:
+  {kind:"create", slug, type, inputs, parentSlug?}
+  {kind:"update", slug, inputs?, removeInputPaths?, version?, parentSlug?}
+  {kind:"delete", slug, recursive?, force?}
+  {kind:"import", slug, type, cloudId, parentSlug?}
+
+Cross-resource refs: use \${slug.outputField} in inputs to reference outputs from other resources.
+Opsy resolves refs and executes operations in dependency order.
+Use schema describe or get schema to inspect fields when you genuinely need it.
+On update, set parentSlug to move a resource under another parent. Use parentSlug:null to move to the top level.
+Use removeInputPaths:["a.b.c"] to delete nested keys while keeping deep-merge update behavior.
+
+Groups: use type:"group" to create virtual folders. Groups auto-complete on apply and cannot be imported or forgotten.
+
+Convenience resource wrappers:
+  create resource / update resource / delete resource
+  These create a change with one mutation and immediately attempt apply.
+  If environment policy blocks apply, the response returns approvalRequired:true plus reviewUrl.
+
+Efficiency:
+  1. Type tokens follow Pulumi format: <provider>:<module>/<Resource>:<Resource>
+  2. Prefer proposing directly and use validation errors as feedback.
+  3. Batch related mutations into one change where possible.
+`.trim();
+var OPSY_COMMAND_SPECS = [
+  {
+    id: "list.resources",
+    path: ["list", "resources"],
+    usage: "opsy list resources --project <project> --env <env> [--parent <slug>] [--detailed]",
+    summary: "List resources in an environment.",
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "parent", value: "<slug>", description: "Filter to children of one resource." }, { name: "detailed", description: "Include full resource records instead of summary rows." })
+  },
+  {
+    id: "list.changes",
+    path: ["list", "changes"],
+    usage: "opsy list changes --project <project> --env <env>",
+    summary: "List recent changes.",
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." })
+  },
+  { id: "list.projects", path: ["list", "projects"], usage: "opsy list projects", summary: "List projects." },
+  {
+    id: "list.envs",
+    path: ["list", "envs"],
+    usage: "opsy list envs --project <project>",
+    summary: "List environments for a project.",
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." })
+  },
+  { id: "list.providers", path: ["list", "providers"], usage: "opsy list providers", summary: "List provider profiles." },
+  {
+    id: "list.schemas",
+    path: ["list", "schemas"],
+    usage: "opsy list schemas --provider <provider> [--query <text>]",
+    summary: "List resource schemas for a provider.",
+    flags: flags({ name: "provider", value: "<provider>", required: true, description: "Provider package, for example aws." }, { name: "query", value: "<text>", description: "Filter by schema token." })
+  },
+  {
+    id: "get.resource",
+    path: ["get", "resource"],
+    usage: "opsy get resource <slug> --project <project> --env <env> [--live]",
+    summary: "Get one resource.",
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "live", description: "Include live cloud state comparison." })
+  },
+  { id: "get.change", path: ["get", "change"], usage: "opsy get change <shortId>", summary: "Get one change with operations." },
+  { id: "get.project", path: ["get", "project"], usage: "opsy get project <slug>", summary: "Get one project." },
+  {
+    id: "get.env",
+    path: ["get", "env"],
+    usage: "opsy get env <slug> --project <project>",
+    summary: "Get one environment.",
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." })
+  },
+  { id: "get.provider", path: ["get", "provider"], usage: "opsy get provider <id>", summary: "Get one provider profile." },
+  {
+    id: "get.schema",
+    path: ["get", "schema"],
+    usage: "opsy get schema <type-token>",
+    summary: "Describe one resource schema."
+  },
+  {
+    id: "create.resource",
+    path: ["create", "resource"],
+    usage: "opsy create resource --project <project> --env <env> --slug <slug> --type <type> --inputs <json> [--parent <slug>]",
+    summary: "Create one resource by proposing one mutation and immediately attempting apply.",
+    examples: [
+      `opsy create resource --project acme --env prod --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'`
+    ],
+    flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "env", value: "<env>", required: true, description: "Environment slug." }, { name: "slug", value: "<slug>", required: true, description: "Resource slug." }, { name: "type", value: "<type>", required: true, description: "Resource token." }, { name: "inputs", value: "<json>", required: true, description: "Resource inputs JSON object." }, { name: "parent", value: "<slug>", description: "Optional parent resource slug." })
+  },
+  {
+    id: "create.change",
+    path: ["create", "change"],
+    usage: "opsy create change --project <project> --env <env> [--mutations <json>] [--summary <text>]",
+    summary: "Create a change, optionally with mutations."
+  },
+  {
+    id: "create.project",
+    path: ["create", "project"],
+    usage: "opsy create project --slug <slug> --name <name>",
+    summary: "Create a project."
+  },
+  {
+    id: "create.env",
+    path: ["create", "env"],
+    usage: "opsy create env --project <project> --slug <slug>",
+    summary: "Create an environment."
+  },
+  {
+    id: "create.provider",
+    path: ["create", "provider"],
+    usage: "opsy create provider --provider <provider> --name <name> --config <json>",
+    summary: "Create a provider profile."
+  },
+  {
+    id: "update.resource",
+    path: ["update", "resource"],
+    usage: "opsy update resource <slug> --project <project> --env <env> --inputs <json>",
+    summary: "Update one resource by proposing one mutation and immediately attempting apply."
+  },
+  {
+    id: "delete.resource",
+    path: ["delete", "resource"],
+    usage: "opsy delete resource <slug> --project <project> --env <env> [--recursive]",
+    summary: "Delete one resource by proposing one mutation and immediately attempting apply."
+  },
+  { id: "apply.change", path: ["apply", "change"], usage: "opsy apply change <shortId>", summary: "Apply a change." },
+  { id: "plan.change", path: ["plan", "change"], usage: "opsy plan change <shortId>", summary: "Preview a change." },
+  { id: "dismiss.change", path: ["dismiss", "change"], usage: "opsy dismiss change <shortId>", summary: "Dismiss a change." },
+  {
+    id: "append.change",
+    path: ["append", "change"],
+    usage: "opsy append change <shortId> --mutations <json> [--summary <text>]",
+    summary: "Append mutations to an open change."
+  },
+  { id: "retry.change", path: ["retry", "change"], usage: "opsy retry change <shortId>", summary: "Retry a failed change." },
+  {
+    id: "refresh.resource",
+    path: ["refresh", "resource"],
+    usage: "opsy refresh resource <slug> --project <project> --env <env>",
+    summary: "Refresh a resource from cloud and recompute conflict state."
+  },
+  {
+    id: "diff.resource",
+    path: ["diff", "resource"],
+    usage: "opsy diff resource <slug> --project <project> --env <env>",
+    summary: "Compare stored and live resource state."
+  },
+  {
+    id: "accept.resource",
+    path: ["accept", "resource"],
+    usage: "opsy accept resource <slug> --project <project> --env <env>",
+    summary: "Accept recorded live state into desired inputs."
+  },
+  {
+    id: "push.resource",
+    path: ["push", "resource"],
+    usage: "opsy push resource <slug> --project <project> --env <env>",
+    summary: "Promote desired state back to cloud through a change."
+  },
+  {
+    id: "restore.resource",
+    path: ["restore", "resource"],
+    usage: "opsy restore resource <slug> --project <project> --env <env> --operation <operationId>",
+    summary: "Restore a resource to the state captured before an operation."
+  },
+  {
+    id: "history.resource",
+    path: ["history", "resource"],
+    usage: "opsy history resource <slug> --project <project> --env <env>",
+    summary: "List operation history for one resource."
+  },
+  {
+    id: "discover.aws.types",
+    path: ["discover", "aws", "types"],
+    usage: "opsy discover aws types --project <project> --env <env> [--query <text>]",
+    summary: "List AWS discovery types."
+  },
+  {
+    id: "discover.aws.list",
+    path: ["discover", "aws", "list"],
+    usage: "opsy discover aws list --project <project> --env <env> [--type <type>] [--region <region>]",
+    summary: "List existing AWS resources."
+  },
+  {
+    id: "discover.aws.inspect",
+    path: ["discover", "aws", "inspect"],
+    usage: "opsy discover aws inspect --project <project> --env <env> --cloud-id <id> --type <type>",
+    summary: "Inspect one AWS resource."
+  },
+  {
+    id: "discover.aws.import",
+    path: ["discover", "aws", "import"],
+    usage: "opsy discover aws import --project <project> --env <env> --items <json>",
+    summary: "Import existing AWS resources into a change."
+  },
+  {
+    id: "observe.aws.logs.tail",
+    path: ["observe", "aws", "logs", "tail"],
+    usage: "opsy observe aws logs tail --project <project> --env <env> --log-group <name> [...]",
+    summary: "Tail CloudWatch log events."
+  },
+  {
+    id: "observe.aws.logs.events",
+    path: ["observe", "aws", "logs", "events"],
+    usage: "opsy observe aws logs events --project <project> --env <env> --log-group <name> [...]",
+    summary: "List CloudWatch log events."
+  },
+  {
+    id: "observe.aws.logs.groups",
+    path: ["observe", "aws", "logs", "groups"],
+    usage: "opsy observe aws logs groups --project <project> --env <env> [...]",
+    summary: "List CloudWatch log groups."
+  },
+  {
+    id: "observe.aws.logs.query",
+    path: ["observe", "aws", "logs", "query"],
+    usage: "opsy observe aws logs query --project <project> --env <env> --log-groups <csv> --query-string <query> [...]",
+    summary: "Run a CloudWatch Logs Insights query."
+  },
+  {
+    id: "observe.aws.metrics.list",
+    path: ["observe", "aws", "metrics", "list"],
+    usage: "opsy observe aws metrics list --project <project> --env <env> [...]",
+    summary: "List CloudWatch metrics."
+  },
+  {
+    id: "observe.aws.metrics.query",
+    path: ["observe", "aws", "metrics", "query"],
+    usage: "opsy observe aws metrics query --project <project> --env <env> --queries <json> [...]",
+    summary: "Run CloudWatch metric queries."
+  },
+  {
+    id: "observe.aws.alarms.list",
+    path: ["observe", "aws", "alarms", "list"],
+    usage: "opsy observe aws alarms list --project <project> --env <env> [...]",
+    summary: "List CloudWatch alarms."
+  },
+  {
+    id: "observe.aws.alarms.detail",
+    path: ["observe", "aws", "alarms", "detail"],
+    usage: "opsy observe aws alarms detail --project <project> --env <env> --alarm-name <name>",
+    summary: "Get one CloudWatch alarm."
+  },
+  {
+    id: "observe.aws.alarms.history",
+    path: ["observe", "aws", "alarms", "history"],
+    usage: "opsy observe aws alarms history --project <project> --env <env> --alarm-name <name> [...]",
+    summary: "List CloudWatch alarm history."
+  },
+  {
+    id: "feedback.send",
+    path: ["feedback", "send"],
+    usage: "opsy feedback send --message <text> [--error-context <json>] [--from-llm]",
+    summary: "Submit feedback to the Opsy team."
+  }
+];
+var TOP_LEVEL_HELP = [
+  "Opsy command surface",
+  "",
+  "Core verbs:",
+  "  list      List resources, changes, projects, environments, providers, or schemas",
+  "  get       Fetch one resource, change, project, environment, provider, or schema",
+  "  create    Create a resource/change/project/environment/provider",
+  "  update    Update a resource",
+  "  delete    Delete a resource",
+  "  apply     Apply a change",
+  "  plan      Preview a change",
+  "  dismiss   Dismiss a change",
+  "  append    Append mutations to a change",
+  "  retry     Retry a failed change",
+  "  refresh   Refresh live resource state",
+  "  diff      Diff stored and live resource state",
+  "  accept    Accept recorded live state for a resource",
+  "  push      Push stored desired state through a change",
+  "  restore   Restore a resource from operation history",
+  "  history   List resource operation history",
+  "",
+  "Cloud-scoped commands:",
+  "  discover aws  Discover existing AWS resources",
+  "  observe aws   Read CloudWatch logs, metrics, and alarms",
+  "",
+  "Other:",
+  "  feedback send  Submit product feedback",
+  "  auth           Authentication commands (CLI only)",
+  "",
+  'Use "opsy <verb> --help" or "opsy <verb> <noun> --help" for details.'
+].join(`
+`);
+function findCommandSpec(path) {
+  return OPSY_COMMAND_SPECS.find((spec) => spec.path.join(" ") === path.join(" "));
+}
+function listCommandSpecsForPrefix(path) {
+  return OPSY_COMMAND_SPECS.filter((spec) => path.every((part, index) => spec.path[index] === part));
+}
+function renderCommandHelp(path) {
+  if (path.length === 0) {
+    return TOP_LEVEL_HELP;
+  }
+  if (path[0] === "observe") {
+    if (path.length === 1) {
+      return `${renderObserveSupportedProviders()}
+Use "opsy observe aws --help" for AWS observe commands.`;
+    }
+    if (path[1] === "aws") {
+      if (path.length === 2) {
+        return renderObserveProviderHelp("aws");
+      }
+      const observeHelp = findObserveCommandHelp("aws", path.slice(2));
+      if (observeHelp) {
+        const notes = observeHelp.notes?.length ? `
+Notes:
+${observeHelp.notes.map((note) => `  ${note}`).join(`
+`)}` : "";
+        const examples = observeHelp.examples.length ? `
+Examples:
+${observeHelp.examples.map((example) => `  ${example}`).join(`
+`)}` : "";
+        return `${observeHelp.synopsis}
+
+${observeHelp.purpose}${notes}${examples}`;
+      }
+    }
+  }
+  if (path[0] === "discover") {
+    if (path.length === 1) {
+      return `Supported discovery providers:
+${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
+`)}
+Use "opsy discover aws --help" for AWS discovery commands.`;
+    }
+    if (path[1] !== "aws") {
+      return getUnsupportedDiscoveryProviderMessage(path[1] ?? "");
+    }
+  }
+  const exact = findCommandSpec(path);
+  if (exact) {
+    const flagLines = exact.flags?.length ? `
+Flags:
+${exact.flags.map((flag) => {
+      const name = `--${flag.name}${flag.value ? ` ${flag.value}` : ""}`;
+      const required = flag.required ? " (required)" : "";
+      return `  ${name}${required}  ${flag.description}`;
+    }).join(`
+`)}` : "";
+    const notes = exact.notes?.length ? `
+Notes:
+${exact.notes.map((note) => `  ${note}`).join(`
+`)}` : "";
+    const examples = exact.examples?.length ? `
+Examples:
+${exact.examples.map((example) => `  ${example}`).join(`
+`)}` : "";
+    return `${exact.usage}
+
+${exact.summary}${flagLines}${notes}${examples}`;
+  }
+  const children = listCommandSpecsForPrefix(path);
+  if (children.length > 0) {
+    const nextParts = [...new Set(children.map((spec) => spec.path[path.length]))].filter(Boolean);
+    if (nextParts.length > 0) {
+      return `${path.join(" ")}
+
+Subcommands:
+${nextParts.map((part) => `  ${part}`).join(`
+`)}`;
+    }
+  }
+  return `Unknown help topic: ${path.join(" ")}`;
+}
+function getObserveSupportedProvidersMessage() {
+  return renderObserveSupportedProviders();
+}
+function getObserveProviderHelpMessage(provider) {
+  return renderObserveProviderHelp(provider);
+}
+// ../contracts/index.ts
+function getUnsupportedDiscoveryProviderMessage2(provider) {
+  return `Discovery is not implemented for "${provider}". Use manual import.`;
+}
+
+// src/commands/common.ts
+init_config();
+init_client();
+var defaultCliDeps = {
+  apiRequest,
+  getToken,
+  getApiUrl,
+  log: (message) => console.log(message),
+  error: (message) => console.error(message),
+  exit: (code) => process.exit(code)
+};
+function getRootFlags(command) {
+  let current = command;
+  while (current.parent)
+    current = current.parent;
+  return current.opts();
+}
+function handleCliError(error, deps) {
+  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+  return deps.exit(1);
+}
+function addSharedHelp(command, path) {
+  const spec = findCommandSpec(path);
+  if (!spec) {
+    return command;
+  }
+  if (spec.examples?.length || spec.notes?.length || spec.flags?.length) {
+    const flags2 = spec.flags?.length ? `
+Flags:
+${spec.flags.map((flag) => {
+      const value = flag.value ? ` ${flag.value}` : "";
+      const required = flag.required ? " (required)" : "";
+      return `  --${flag.name}${value}${required}  ${flag.description}`;
+    }).join(`
+`)}` : "";
+    const notes = spec.notes?.length ? `
+Notes:
+${spec.notes.map((note) => `  ${note}`).join(`
+`)}` : "";
+    const examples = spec.examples?.length ? `
+Examples:
+${spec.examples.map((example) => `  ${example}`).join(`
+`)}` : "";
+    command.addHelpText("after", `
+${spec.usage}${flags2}${notes}${examples}`);
+  }
+  return command;
+}
+
+// src/output.ts
+function formatTable(headers, rows) {
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
+  const sep = widths.map((w) => "-".repeat(w)).join("  ");
+  const head = headers.map((h, i) => h.padEnd(widths[i])).join("  ");
+  const body = rows.map((r) => r.map((c, i) => (c ?? "").padEnd(widths[i])).join("  ")).join(`
+`);
+  return `${head}
+${sep}
+${body}`;
+}
+function output(data, flags2) {
+  if (flags2.json) {
+    console.log(JSON.stringify(data, null, 2));
+  } else if (flags2.quiet) {
+    if (typeof data === "string")
+      console.log(data);
+    else if (data && typeof data === "object" && "id" in data)
+      console.log(data.id);
+    else if (data && typeof data === "object" && "shortId" in data)
+      console.log(data.shortId);
+  } else {
+    console.log(data);
+  }
+}
+
+// src/commands/list.ts
+function createListCommand(deps = defaultCliDeps) {
+  const listCmd = new Command("list").description("List resources and other nouns");
+  addSharedHelp(listCmd.command("resources").description("List resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    const path = `/projects/${opts.project}/environments/${opts.env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
+    try {
+      const resources = await deps.apiRequest(path, { token, apiUrl });
+      if (flags2.json || opts.detailed)
+        return output(resources, flags2);
+      if (!resources.length)
+        return deps.log("No resources found.");
+      deps.log(formatTable(["SLUG", "KIND", "TYPE", "STATUS"], resources.map((resource) => [resource.slug, resource.kind, resource.type, resource.status])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "resources"]);
+  addSharedHelp(listCmd.command("changes").description("List changes").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const changes = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, { token, apiUrl });
+      if (flags2.json)
+        return output(changes, flags2);
+      if (!changes.length)
+        return deps.log("No changes found.");
+      deps.log(formatTable(["SHORT-ID", "STATUS", "SUMMARY", "CREATED"], changes.map((change) => [change.shortId, change.status, change.summary ?? "-", new Date(change.createdAt).toLocaleDateString()])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "changes"]);
+  addSharedHelp(listCmd.command("projects").description("List projects").action(async function() {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const projects = await deps.apiRequest("/projects", { token, apiUrl });
+      if (flags2.json)
+        return output(projects, flags2);
+      if (!projects.length)
+        return deps.log("No projects found.");
+      deps.log(formatTable(["SLUG", "NAME", "CREATED"], projects.map((project) => [project.slug, project.name, new Date(project.createdAt).toLocaleDateString()])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "projects"]);
+  addSharedHelp(listCmd.command("envs").description("List environments").requiredOption("--project <slug>", "Project slug").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const envs = await deps.apiRequest(`/projects/${opts.project}/environments`, { token, apiUrl });
+      if (flags2.json)
+        return output(envs, flags2);
+      if (!envs.length)
+        return deps.log("No environments found.");
+      deps.log(formatTable(["SLUG", "AUTO-APPLY", "CREATED"], envs.map((env) => [env.slug, env.autoApplyPolicy ?? "disabled", new Date(env.createdAt).toLocaleDateString()])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "envs"]);
+  addSharedHelp(listCmd.command("providers").description("List provider profiles").action(async function() {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const providers = await deps.apiRequest("/providers", { token, apiUrl });
+      if (flags2.json)
+        return output(providers, flags2);
+      if (!providers.length)
+        return deps.log("No provider profiles.");
+      deps.log(formatTable(["ID", "PROVIDER", "PROFILE"], providers.map((provider) => [provider.id.slice(0, 8), provider.providerPkg, provider.profileName])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "providers"]);
+  addSharedHelp(listCmd.command("schemas").description("List resource schemas for a provider").requiredOption("--provider <pkg>", "Provider package").option("--query <text>", "Filter query").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const result = await deps.apiRequest(`/schemas/types?provider=${encodeURIComponent(opts.provider)}${opts.query ? `&query=${encodeURIComponent(opts.query)}` : ""}`, { token, apiUrl });
+      if (flags2.json)
+        return output(result, flags2);
+      if (!result.types.length)
+        return deps.log("No schemas found.");
+      deps.log(formatTable(["TOKEN", "NAME"], result.types.map((type) => [type.token ?? type.type ?? type.pulumiType ?? "-", type.name ?? "-"])));
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["list", "schemas"]);
+  return listCmd;
+}
+var listCmd = createListCommand();
+
+// src/commands/get.ts
+function createGetCommand(deps = defaultCliDeps) {
+  const getCmd = new Command("get").description("Get one resource and other nouns");
+  addSharedHelp(getCmd.command("resource").description("Get one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--live", "Include live resource comparison").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      if (!opts.live) {
+        return output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, { token, apiUrl }), flags2);
+      }
+      return output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/live`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "resource"]);
+  addSharedHelp(getCmd.command("change").description("Get one change").argument("<shortId>").action(async function(shortId) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/changes/${shortId}`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "change"]);
+  addSharedHelp(getCmd.command("project").description("Get one project").argument("<slug>").action(async function(slug) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${slug}`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "project"]);
+  addSharedHelp(getCmd.command("env").description("Get one environment").argument("<slug>").requiredOption("--project <slug>", "Project slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${slug}`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "env"]);
+  addSharedHelp(getCmd.command("provider").description("Get one provider profile").argument("<id>").action(async function(id) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/providers/${id}`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "provider"]);
+  addSharedHelp(getCmd.command("schema").description("Get one resource schema").argument("<token>").action(async function(tokenArg) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/schemas/describe/${encodeURIComponent(tokenArg)}`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["get", "schema"]);
+  return getCmd;
+}
+var getCmd = createGetCommand();
+
+// src/commands/create.ts
+function parseJson(value) {
+  return JSON.parse(value);
+}
+function createCreateCommand(deps = defaultCliDeps) {
+  const createCmd = new Command("create").description("Create resources and other nouns");
+  addSharedHelp(createCmd.command("resource").description("Create one resource and immediately attempt apply").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--slug <slug>", "Resource slug").requiredOption("--type <type>", "Resource token").requiredOption("--inputs <json>", "Inputs JSON object").option("--parent <slug>", "Parent resource slug").option("--summary <text>", "Change summary").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources`, {
+        method: "POST",
+        body: {
+          slug: opts.slug,
+          type: opts.type,
+          inputs: parseJson(opts.inputs),
+          parentSlug: opts.parent,
+          summary: opts.summary
+        },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["create", "resource"]);
+  addSharedHelp(createCmd.command("change").description("Create a change").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const body = {};
+      if (opts.summary)
+        body.summary = opts.summary;
+      if (opts.mutations)
+        body.mutations = parseJson(opts.mutations);
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/changes`, {
+        method: "POST",
+        body,
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["create", "change"]);
+  addSharedHelp(createCmd.command("project").description("Create a project").requiredOption("--slug <slug>", "Project slug").requiredOption("--name <name>", "Project name").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest("/projects", { method: "POST", body: opts, token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["create", "project"]);
+  addSharedHelp(createCmd.command("env").description("Create an environment").requiredOption("--project <slug>", "Project slug").requiredOption("--slug <slug>", "Environment slug").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments`, {
+        method: "POST",
+        body: { slug: opts.slug },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["create", "env"]);
+  addSharedHelp(createCmd.command("provider").description("Create a provider profile").requiredOption("--provider <pkg>", "Provider package").requiredOption("--name <name>", "Profile name").requiredOption("--config <json>", "Provider config JSON").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest("/providers", {
+        method: "POST",
+        body: { providerPkg: opts.provider, profileName: opts.name, config: parseJson(opts.config) },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["create", "provider"]);
+  return createCmd;
+}
+var createCmd = createCreateCommand();
+
+// src/commands/update.ts
+function createUpdateCommand(deps = defaultCliDeps) {
+  const updateCmd = new Command("update").description("Update resources");
+  addSharedHelp(updateCmd.command("resource").description("Update one resource and immediately attempt apply").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--inputs <json>", "Inputs JSON object").option("--summary <text>", "Change summary").option("--remove-input-paths <json>", "JSON array of input paths to remove").option("--parent <slug>", "New parent slug").option("--version <n>", "Optimistic-lock version").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}`, {
+        method: "PUT",
+        body: {
+          inputs: JSON.parse(opts.inputs),
+          summary: opts.summary,
+          removeInputPaths: opts.removeInputPaths ? JSON.parse(opts.removeInputPaths) : undefined,
+          parentSlug: opts.parent,
+          version: opts.version ? Number(opts.version) : undefined
+        },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["update", "resource"]);
+  return updateCmd;
+}
+var updateCmd = createUpdateCommand();
+
+// src/commands/delete.ts
+function createDeleteCommand(deps = defaultCliDeps) {
+  const deleteCmd = new Command("delete").description("Delete resources");
+  addSharedHelp(deleteCmd.command("resource").description("Delete one resource and immediately attempt apply").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--recursive", "Delete descendants too").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const query = opts.recursive ? "?recursive=true" : "";
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}${query}`, {
+        method: "DELETE",
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["delete", "resource"]);
+  return deleteCmd;
+}
+var deleteCmd = createDeleteCommand();
+
+// src/commands/apply.ts
+function createApplyCommand(deps = defaultCliDeps) {
+  const applyCmd = new Command("apply").description("Apply changes");
+  addSharedHelp(applyCmd.command("change").description("Apply one change").argument("<shortId>").action(async function(shortId) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      const result = await deps.apiRequest(`/changes/${shortId}/apply`, { method: "POST", token, apiUrl });
+      if (flags2.json)
+        return output(result, flags2);
+      if (result.approvalRequired) {
+        deps.log(`Manual approval required for change ${result.change.shortId}.`);
+        deps.log(`Review: ${result.reviewUrl}`);
+        return;
+      }
+      output(result, flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["apply", "change"]);
+  return applyCmd;
+}
+var applyCmd = createApplyCommand();
+
+// src/commands/plan.ts
+function createPlanCommand(deps = defaultCliDeps) {
+  const planCmd = new Command("plan").description("Preview changes");
+  addSharedHelp(planCmd.command("change").description("Preview one change").argument("<shortId>").action(async function(shortId) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/changes/${shortId}/preview`, { method: "POST", token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["plan", "change"]);
+  return planCmd;
+}
+var planCmd = createPlanCommand();
+
+// src/commands/dismiss.ts
+function createDismissCommand(deps = defaultCliDeps) {
+  const dismissCmd = new Command("dismiss").description("Dismiss changes");
+  addSharedHelp(dismissCmd.command("change").description("Dismiss one change").argument("<shortId>").action(async function(shortId) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/changes/${shortId}/dismiss`, { method: "POST", token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["dismiss", "change"]);
+  return dismissCmd;
+}
+var dismissCmd = createDismissCommand();
+
+// src/commands/append.ts
+function createAppendCommand(deps = defaultCliDeps) {
+  const appendCmd = new Command("append").description("Append mutations to changes");
+  addSharedHelp(appendCmd.command("change").description("Append mutations to one change").argument("<shortId>").requiredOption("--mutations <json>", "Mutation array").option("--summary <text>", "Change summary override").action(async function(shortId, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/changes/${shortId}/mutations`, {
+        method: "POST",
+        body: { mutations: JSON.parse(opts.mutations), summary: opts.summary },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["append", "change"]);
+  return appendCmd;
+}
+var appendCmd = createAppendCommand();
+
+// src/commands/retry.ts
+function createRetryCommand(deps = defaultCliDeps) {
+  const retryCmd = new Command("retry").description("Retry failed changes");
+  addSharedHelp(retryCmd.command("change").description("Retry one failed change").argument("<shortId>").action(async function(shortId) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/changes/${shortId}/retry`, { method: "POST", token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["retry", "change"]);
+  return retryCmd;
+}
+var retryCmd = createRetryCommand();
+
+// src/commands/refresh.ts
+function createRefreshCommand(deps = defaultCliDeps) {
+  const refreshCmd = new Command("refresh").description("Refresh live resource state");
+  addSharedHelp(refreshCmd.command("resource").description("Refresh one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/sync`, {
+        method: "POST",
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["refresh", "resource"]);
+  return refreshCmd;
+}
+var refreshCmd = createRefreshCommand();
+
+// src/commands/diff.ts
+function createDiffCommand(deps = defaultCliDeps) {
+  const diffCmd = new Command("diff").description("Diff stored and live resource state");
+  addSharedHelp(diffCmd.command("resource").description("Diff one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/diff`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["diff", "resource"]);
+  return diffCmd;
+}
+var diffCmd = createDiffCommand();
+
+// src/commands/accept.ts
+function createAcceptCommand(deps = defaultCliDeps) {
+  const acceptCmd = new Command("accept").description("Accept recorded live state");
+  addSharedHelp(acceptCmd.command("resource").description("Accept live state for one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/accept-live`, {
+        method: "POST",
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["accept", "resource"]);
+  return acceptCmd;
+}
+var acceptCmd = createAcceptCommand();
+
+// src/commands/push.ts
+function createPushCommand(deps = defaultCliDeps) {
+  const pushCmd = new Command("push").description("Push desired resource state through a change");
+  addSharedHelp(pushCmd.command("resource").description("Push one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/promote-current`, {
+        method: "POST",
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["push", "resource"]);
+  return pushCmd;
+}
+var pushCmd = createPushCommand();
+
+// src/commands/restore.ts
+function createRestoreCommand(deps = defaultCliDeps) {
+  const restoreCmd = new Command("restore").description("Restore resource state");
+  addSharedHelp(restoreCmd.command("resource").description("Restore one resource from an operation snapshot").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--operation <id>", "Operation id").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/restore`, {
+        method: "POST",
+        body: { operationId: opts.operation },
+        token,
+        apiUrl
+      }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["restore", "resource"]);
+  return restoreCmd;
+}
+var restoreCmd = createRestoreCommand();
+
+// src/commands/history.ts
+function createHistoryCommand(deps = defaultCliDeps) {
+  const historyCmd = new Command("history").description("List resource history");
+  addSharedHelp(historyCmd.command("resource").description("List history for one resource").argument("<slug>").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").action(async function(slug, opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      output(await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/resources/${slug}/history`, { token, apiUrl }), flags2);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  }), ["history", "resource"]);
+  return historyCmd;
+}
+var historyCmd = createHistoryCommand();
+
+// src/commands/feedback.ts
+function createFeedbackCommand(deps = defaultCliDeps) {
+  const feedbackCmd = new Command("feedback").description("Submit feedback to the Opsy team");
+  feedbackCmd.command("send").description("Send feedback, bug report, or feature request").requiredOption("--message <text>", "Feedback message (max 4000 chars)").option("--error-context <json>", "JSON object with error/debug context").option("--from-llm", "Indicate this feedback is being sent by an LLM").action(async function(opts) {
+    const flags2 = getRootFlags(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
+    try {
+      let metadata;
+      if (opts.errorContext) {
+        const parsed = JSON.parse(opts.errorContext);
+        metadata = { errorContext: parsed };
+      }
+      const result = await deps.apiRequest("/feedback", {
+        method: "POST",
+        body: {
+          message: opts.message,
+          source: opts.fromLlm ? "cli_llm" : "cli",
+          metadata
+        },
+        token,
+        apiUrl
+      });
+      if (flags2.json)
+        return output(result, flags2);
+      deps.log(`Feedback submitted (id: ${result.id}). Thank you!`);
+    } catch (error) {
+      handleCliError(error, deps);
+    }
+  });
+  return feedbackCmd;
+}
+var feedbackCmd = createFeedbackCommand();
 // src/commands/discover.ts
 init_config();
 init_client();
-var defaultDeps2 = {
+var defaultDeps = {
   apiRequest,
   getToken,
   getApiUrl,
@@ -2982,7 +3404,7 @@ var defaultDeps2 = {
 };
 function formatSupportedDiscoveryProviders() {
   return `Supported discovery providers:
-${DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
+${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
 `)}`;
 }
 function getRootFlags2(command) {
@@ -3004,7 +3426,7 @@ function handleCliError2(error, deps) {
   deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
   return deps.exit(1);
 }
-function createDiscoverCommand(deps = defaultDeps2) {
+function createDiscoverCommand(deps = defaultDeps) {
   const discoverCmd = new Command("discover").description("Provider-scoped resource discovery").argument("[provider]").argument("[args...]");
   discoverCmd.action((provider) => {
     if (!provider) {
@@ -3012,7 +3434,7 @@ function createDiscoverCommand(deps = defaultDeps2) {
       deps.log('Use "opsy discover aws --help" for AWS discovery commands.');
       return;
     }
-    deps.error(`Error: ${getUnsupportedDiscoveryProviderMessage(provider)}`);
+    deps.error(`Error: ${getUnsupportedDiscoveryProviderMessage2(provider)}`);
     deps.exit(1);
   });
   const awsCmd = new Command("aws").description("Discover existing AWS resources");
@@ -3020,14 +3442,14 @@ function createDiscoverCommand(deps = defaultDeps2) {
     deps.log(this.helpInformation());
   });
   awsCmd.command("types").description("List AWS resource types that support discovery").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
-    const flags = getRootFlags2(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags2(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/types${buildQuery({ query: opts.query })}`;
     try {
       const types = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(types, flags);
+      if (flags2.json)
+        return output(types, flags2);
       if (!types.length) {
         deps.log("No AWS discovery types found.");
         return;
@@ -3038,9 +3460,9 @@ function createDiscoverCommand(deps = defaultDeps2) {
     }
   });
   awsCmd.command("list").description("List existing AWS resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--type <reType>", "Filter by AWS Resource Explorer type").option("--region <region>", "Filter by AWS region").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
-    const flags = getRootFlags2(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags2(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws${buildQuery({
       type: opts.type,
       region: opts.region,
@@ -3048,8 +3470,8 @@ function createDiscoverCommand(deps = defaultDeps2) {
     })}`;
     try {
       const resources = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(resources, flags);
+      if (flags2.json)
+        return output(resources, flags2);
       if (!resources.length) {
         deps.log("No AWS resources found.");
         return;
@@ -3060,9 +3482,9 @@ function createDiscoverCommand(deps = defaultDeps2) {
     }
   });
   awsCmd.command("inspect").description("Inspect a single AWS resource").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--cloud-id <id>", "AWS cloud ID").requiredOption("--type <type>", "Pulumi token or AWS Resource Explorer type").option("--profile <profileId>", "Use a specific AWS provider profile").action(async function(opts) {
-    const flags = getRootFlags2(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags2(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/discover/aws/inspect${buildQuery({
       cloudId: opts.cloudId,
       type: opts.type,
@@ -3070,20 +3492,20 @@ function createDiscoverCommand(deps = defaultDeps2) {
     })}`;
     try {
       const detail = await deps.apiRequest(path, { token, apiUrl });
-      output(detail, flags);
+      output(detail, flags2);
     } catch (error) {
       handleCliError2(error, deps);
     }
   });
   awsCmd.command("import").description("Import discovered AWS resources").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--items <json>", "JSON array of {cloudId, type, slug}").action(async function(opts) {
-    const flags = getRootFlags2(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags2(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     try {
       const items = JSON.parse(opts.items);
       const result = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/discover/aws/import`, { method: "POST", body: { items }, token, apiUrl });
-      if (flags.json)
-        return output(result, flags);
+      if (flags2.json)
+        return output(result, flags2);
       deps.log(`Change ${result.change.shortId} created with ${result.operations.length} AWS import operation(s).`);
     } catch (error) {
       handleCliError2(error, deps);
@@ -3097,7 +3519,7 @@ var discoverCmd = createDiscoverCommand();
 // src/commands/observe.ts
 init_client();
 init_config();
-var defaultDeps3 = {
+var defaultDeps2 = {
   apiRequest,
   getToken,
   getApiUrl,
@@ -3123,9 +3545,9 @@ function buildQuery2(params) {
 function isQueryTimeoutDetails(value) {
   return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "query_timeout");
 }
-function handleCliError3(error, deps, flags) {
-  if (flags?.json && error instanceof ApiRequestError) {
-    output(error.body, flags);
+function handleCliError3(error, deps, flags2) {
+  if (flags2?.json && error instanceof ApiRequestError) {
+    output(error.body, flags2);
     return deps.exit(1);
   }
   deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
@@ -3175,11 +3597,11 @@ function printLogEvents(deps, events) {
   deps.log(events.map((event) => `[${event.timestamp}] ${event.logStreamName ?? "-"} ${event.message}`).join(`
 `));
 }
-function createObserveCommand(deps = defaultDeps3) {
+function createObserveCommand(deps = defaultDeps2) {
   const observeCmd = new Command("observe").description("Provider-scoped logs, metrics, and alarms").argument("[provider]").argument("[args...]");
   observeCmd.action((provider) => {
     if (!provider) {
-      deps.log(renderObserveSupportedProviders());
+      deps.log(getObserveSupportedProvidersMessage());
       deps.log('Use "opsy observe aws --help" for AWS observe commands.');
       return;
     }
@@ -3188,7 +3610,7 @@ function createObserveCommand(deps = defaultDeps3) {
   });
   const awsCmd = new Command("aws").description("Observe AWS CloudWatch logs, metrics, and alarms");
   awsCmd.addHelpText("after", `
-${renderObserveProviderHelp("aws")}`);
+${getObserveProviderHelpMessage("aws")}`);
   awsCmd.action(function() {
     deps.log(this.helpInformation());
   });
@@ -3197,9 +3619,9 @@ ${renderObserveProviderHelp("aws")}`);
     deps.log(this.helpInformation());
   });
   const groupsCmd = new Command("groups").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/groups${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3209,8 +3631,8 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       if (!data.items.length) {
         deps.log("No log groups found.");
         return;
@@ -3222,15 +3644,15 @@ ${renderObserveProviderHelp("aws")}`);
         group.logGroupClass ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(groupsCmd, ["logs", "groups"]);
   logsCmd.addCommand(groupsCmd);
   const tailCmd = new Command("tail").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/tail${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3243,19 +3665,19 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       printLogEvents(deps, data.events);
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(tailCmd, ["logs", "tail"]);
   logsCmd.addCommand(tailCmd);
   const eventsCmd = new Command("events").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/events${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3269,19 +3691,19 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       printLogEvents(deps, data.events);
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(eventsCmd, ["logs", "events"]);
   logsCmd.addCommand(eventsCmd);
   const queryCmd = new Command("query").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     try {
       const data = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/observe/aws/logs/query`, {
         method: "POST",
@@ -3298,8 +3720,8 @@ ${renderObserveProviderHelp("aws")}`);
         token,
         apiUrl
       });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       if (!data.rows.length) {
         deps.log(`Query completed with status ${data.status} and returned no rows.`);
         return;
@@ -3307,7 +3729,7 @@ ${renderObserveProviderHelp("aws")}`);
       const columns = Array.from(new Set(data.rows.flatMap((row) => Object.keys(row))));
       deps.log(formatTable(columns, data.rows.map((row) => columns.map((column) => String(row[column] ?? "")))));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(queryCmd, ["logs", "query"]);
@@ -3318,9 +3740,9 @@ ${renderObserveProviderHelp("aws")}`);
     deps.log(this.helpInformation());
   });
   const metricsListCmd = new Command("list").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     try {
       if (opts.dimensions)
         parseJsonArray(opts.dimensions, "--dimensions");
@@ -3333,8 +3755,8 @@ ${renderObserveProviderHelp("aws")}`);
         recentlyActive: opts.recentlyActive,
         nextToken: opts.nextToken
       })}`, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       if (!data.items.length) {
         deps.log("No metrics found.");
         return;
@@ -3345,15 +3767,15 @@ ${renderObserveProviderHelp("aws")}`);
         metric.dimensions.map((dimension) => `${dimension.name}=${dimension.value ?? "*"}`).join(", ")
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(metricsListCmd, ["metrics", "list"]);
   metricsCmd.addCommand(metricsListCmd);
   const metricsQueryCmd = new Command("query").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     try {
       const queries = parseJsonArray(opts.queries, "--queries");
       const data = await deps.apiRequest(`/projects/${opts.project}/environments/${opts.env}/observe/aws/metrics/query`, {
@@ -3370,8 +3792,8 @@ ${renderObserveProviderHelp("aws")}`);
         token,
         apiUrl
       });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       deps.log(formatTable(["ID", "LABEL", "STATUS", "POINTS"], data.results.map((series) => [
         series.id,
         series.label ?? "-",
@@ -3379,7 +3801,7 @@ ${renderObserveProviderHelp("aws")}`);
         String(series.values.length)
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(metricsQueryCmd, ["metrics", "query"]);
@@ -3390,9 +3812,9 @@ ${renderObserveProviderHelp("aws")}`);
     deps.log(this.helpInformation());
   });
   const alarmsListCmd = new Command("list").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3404,8 +3826,8 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       if (!data.items.length) {
         deps.log("No alarms found.");
         return;
@@ -3417,15 +3839,15 @@ ${renderObserveProviderHelp("aws")}`);
         alarm.stateUpdatedAt ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsListCmd, ["alarms", "list"]);
   alarmsCmd.addCommand(alarmsListCmd);
   const alarmsDetailCmd = new Command("detail").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms/detail${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3433,17 +3855,17 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      output(data, flags);
+      output(data, flags2);
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsDetailCmd, ["alarms", "detail"]);
   alarmsCmd.addCommand(alarmsDetailCmd);
   const alarmsHistoryCmd = new Command("history").requiredOption("--project <slug>", "Project slug").requiredOption("--env <slug>", "Environment slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS provider profile").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags = getRootFlags3(this);
-    const token = deps.getToken(flags);
-    const apiUrl = deps.getApiUrl(flags);
+    const flags2 = getRootFlags3(this);
+    const token = deps.getToken(flags2);
+    const apiUrl = deps.getApiUrl(flags2);
     const path = `/projects/${opts.project}/environments/${opts.env}/observe/aws/alarms/history${buildQuery2({
       profileId: opts.profile,
       region: opts.region,
@@ -3456,8 +3878,8 @@ ${renderObserveProviderHelp("aws")}`);
     })}`;
     try {
       const data = await deps.apiRequest(path, { token, apiUrl });
-      if (flags.json)
-        return output(data, flags);
+      if (flags2.json)
+        return output(data, flags2);
       if (!data.items.length) {
         deps.log("No alarm history found.");
         return;
@@ -3468,7 +3890,7 @@ ${renderObserveProviderHelp("aws")}`);
         item.summary ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags);
+      handleCliError3(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsHistoryCmd, ["alarms", "history"]);
@@ -3490,13 +3912,26 @@ function getCliVersion() {
 }
 var program2 = new Command().name("opsy").description("Opsy CLI — Agent-to-Infrastructure control plane").version(getCliVersion()).option("--token <pat>", "Personal Access Token (env: OPSY_TOKEN)").option("--api-url <url>", "API URL (env: OPSY_API_URL)").option("--json", "Output JSON").option("--quiet", "Minimal output");
 program2.addCommand(authCmd);
-program2.addCommand(projectCmd);
-program2.addCommand(envCmd);
-program2.addCommand(resourceCmd);
-program2.addCommand(changeCmd);
-program2.addCommand(schemaCmd);
+program2.addCommand(listCmd);
+program2.addCommand(getCmd);
+program2.addCommand(createCmd);
+program2.addCommand(updateCmd);
+program2.addCommand(deleteCmd);
+program2.addCommand(applyCmd);
+program2.addCommand(planCmd);
+program2.addCommand(dismissCmd);
+program2.addCommand(appendCmd);
+program2.addCommand(retryCmd);
+program2.addCommand(refreshCmd);
+program2.addCommand(diffCmd);
+program2.addCommand(acceptCmd);
+program2.addCommand(pushCmd);
+program2.addCommand(restoreCmd);
+program2.addCommand(historyCmd);
 program2.addCommand(discoverCmd);
 program2.addCommand(observeCmd);
-program2.addCommand(providerCmd);
 program2.addCommand(feedbackCmd);
+program2.configureHelp({
+  formatHelp: () => renderCommandHelp([])
+});
 program2.parse();

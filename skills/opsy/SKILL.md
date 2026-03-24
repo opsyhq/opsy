@@ -14,6 +14,7 @@ Use this skill for tasks involving Opsy projects, environments, resources, chang
 - **MCP** — preferred for interactive workflows (inspect, edit, validate, apply in one session)
 - **CLI** — use when MCP is unavailable or for one-shot commands and scripts
 - Use `observe` when the task is operational troubleshooting: logs, metrics, alarms, or recent runtime signals.
+- CLI and MCP now share the same verb-first grammar through the single `opsy` surface.
 
 ## Workflow
 
@@ -26,3 +27,4 @@ Use this skill for tasks involving Opsy projects, environments, resources, chang
 ## CLI reference
 
 See `references/commands.md` for the full command surface.
+See `references/domain.md` for mutation format, refs, groups, and auto-apply behavior.

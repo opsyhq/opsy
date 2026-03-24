@@ -1,6 +1,6 @@
 # CLI Commands
 
-This reference mirrors the current CLI in [packages/cli/src](/Users/sabachikhinashvili/projects/opsy/opsy/packages/cli/src).
+This reference mirrors the shared verb-first command surface used by the CLI and the MCP `opsy` tool.
 
 ## Auth
 
@@ -15,49 +15,56 @@ Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`
 ## Projects
 
 ```bash
-opsy project list
-opsy project get <slug>
-opsy project create --slug <slug> --name <name>
+opsy list projects
+opsy get project <slug>
+opsy create project --slug <slug> --name <name>
 ```
 
 ## Environments
 
 ```bash
-opsy env list --project <slug>
-opsy env get --project <slug> --env <slug>
-opsy env create --project <slug> --slug <slug>
+opsy list envs --project <slug>
+opsy get env <slug> --project <slug>
+opsy create env --project <slug> --slug <slug>
 ```
 
 ## Resources
 
 ```bash
-opsy resource ls --project <slug> --env <slug> [--parent <slug>]
-opsy resource get <slug> --project <slug> --env <slug> [--live]
-opsy resource sync <slug> --project <slug> --env <slug>
-opsy resource accept-live <slug> --project <slug> --env <slug>
-opsy resource promote-current <slug> --project <slug> --env <slug>
-opsy resource tree --project <slug> --env <slug> [--depth <n>]
+opsy list resources --project <slug> --env <slug> [--parent <slug>] [--detailed]
+opsy get resource <slug> --project <slug> --env <slug> [--live]
+opsy create resource --project <slug> --env <slug> --slug <slug> --type <token> --inputs <json> [--parent <slug>]
+opsy update resource <slug> --project <slug> --env <slug> --inputs <json>
+opsy delete resource <slug> --project <slug> --env <slug> [--recursive]
+opsy refresh resource <slug> --project <slug> --env <slug>
+opsy diff resource <slug> --project <slug> --env <slug>
+opsy accept resource <slug> --project <slug> --env <slug>
+opsy push resource <slug> --project <slug> --env <slug>
+opsy restore resource <slug> --project <slug> --env <slug> --operation <id>
+opsy history resource <slug> --project <slug> --env <slug>
 ```
 
 ## Changes
 
 ```bash
-opsy change create --project <slug> --env <slug> [--summary <text>] [--mutations <json>] [--apply]
-opsy change update <short-id> --mutations <json> [--summary <text>] [--apply]
-opsy change list --project <slug> --env <slug>
-opsy change get <short-id>
-opsy change preview <short-id>
-opsy change apply <short-id>
-opsy change dismiss <short-id>
-opsy change retry <short-id>
+opsy create change --project <slug> --env <slug> [--summary <text>] [--mutations <json>]
+opsy append change <short-id> --mutations <json> [--summary <text>]
+opsy list changes --project <slug> --env <slug>
+opsy get change <short-id>
+opsy plan change <short-id>
+opsy apply change <short-id>
+opsy dismiss change <short-id>
+opsy retry change <short-id>
 ```
 
 ## Schema
 
 ```bash
-opsy schema providers
-opsy schema types --provider <pkg>
-opsy schema describe --type <token>
+opsy list providers
+opsy get provider <id>
+opsy create provider --provider <pkg> --name <name> --config <json>
+opsy list schemas --provider <pkg> [--query <text>]
+opsy get schema <token>
 ```
 
 ## Discovery
@@ -85,18 +92,10 @@ opsy observe aws alarms detail --project <slug> --env <slug> --alarm-name <name>
 opsy observe aws alarms history --project <slug> --env <slug> --alarm-name <name> [--profile <profileId>] [--region <region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
 ```
 
-## Provider Profiles
-
-```bash
-opsy provider list
-opsy provider get <id>
-opsy provider create --provider <pkg> --name <name> --config <json>
-```
-
 ## Feedback
 
 ```bash
-opsy feedback send --message <text> [--from-llm]
+opsy feedback send --message <text> [--error-context <json>] [--from-llm]
 ```
 
 All commands support global `--json` and `--quiet` flags.

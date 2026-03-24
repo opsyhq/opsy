@@ -14,23 +14,33 @@ npm install -g @opsyhq/opsy
 
 ```bash
 opsy auth login --token <pat>
-opsy project list
-opsy env list --project <slug>
-opsy resource ls --project <slug> --env <slug>
+opsy list projects
+opsy list envs --project <slug>
+opsy list resources --project <slug> --env <slug>
 ```
 
 ## Commands
 
 ```text
 auth      Authentication
-project   Manage workspaces/projects
-env       Manage environments
-resource  Manage resources
-change    Manage changes
-schema    Browse resource schemas
+list      List resources, changes, projects, environments, providers, and schemas
+get       Fetch one resource, change, project, environment, provider, or schema
+create    Create resources, changes, projects, environments, and providers
+update    Update resources
+delete    Delete resources
+apply     Apply a change
+plan      Preview a change
+dismiss   Dismiss a change
+append    Append mutations to a change
+retry     Retry a failed change
+refresh   Refresh live resource state
+diff      Diff stored and live resource state
+accept    Accept recorded live state for a resource
+push      Push stored desired state through a change
+restore   Restore a resource from operation history
+history   List resource operation history
 discover  Provider-scoped resource discovery
 observe   Provider-scoped logs, metrics, and alarms
-provider  Manage provider profiles
 feedback  Submit feedback to the Opsy team
 ```
 
