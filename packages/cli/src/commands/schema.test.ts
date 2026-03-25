@@ -12,6 +12,7 @@ function createProgram(command = createSchemaCommand({
     }
     return {
       token: "cloudflare:index/zone:Zone",
+      description: "Cloudflare zone resource.",
       inputs: { account: "string" },
       outputs: { id: "string" },
     };
@@ -63,13 +64,14 @@ describe("schema CLI command", () => {
     expect(paths).toEqual(["/schemas/types?provider=cloudflare&query=zone"]);
   });
 
-  test("schema get uses the describe query route", async () => {
+  test("schema get uses the describe query route for compact schema payloads", async () => {
     const paths: string[] = [];
     const program = createProgram(createSchemaCommand({
       apiRequest: async (path: string) => {
         paths.push(path);
         return {
           token: "cloudflare:index/zone:Zone",
+          description: "Cloudflare zone resource.",
           inputs: { account: "string" },
           outputs: { id: "string" },
         };

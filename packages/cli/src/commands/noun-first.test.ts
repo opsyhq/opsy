@@ -132,7 +132,8 @@ describe("noun-first CLI surface", () => {
 
     await program.parseAsync(["node", "opsy", "change", "apply", "abcd1234"], { from: "node" });
 
-    expect(logs.join("\n")).toContain("Manual approval required");
+    expect(logs.join("\n")).toContain("Human approval required in the Opsy web UI");
+    expect(logs.join("\n")).toContain("has not been applied yet");
     expect(logs.join("\n")).toContain("https://example.com/review");
   });
 

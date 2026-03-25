@@ -150,8 +150,9 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
           const result = await deps.apiRequest<any>(`/changes/${changeShortId}/apply`, { method: "POST", token, apiUrl });
           if (flags.json) return output(result, flags);
           if (result.approvalRequired) {
-            deps.log(`Manual approval required for change ${result.change.shortId}.`);
-            deps.log(`Review: ${result.reviewUrl}`);
+            deps.log(`Human approval required in the Opsy web UI for change ${result.change.shortId}.`);
+            deps.log("The change has not been applied yet.");
+            deps.log(`Ask a human to open ${result.reviewUrl} and approve it there.`);
             return;
           }
           output(result, flags);

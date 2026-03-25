@@ -94,6 +94,7 @@ export type ChangeMutation = {
   cloudId?: string;
   importId?: string;
   parent?: string | null;
+  dependsOn?: string[];
   recursive?: boolean;
   force?: boolean;
   version?: number;
@@ -299,6 +300,7 @@ export type ResourceRecord = {
   version: number;
   cloudId: string | null;
   inputs: Record<string, unknown>;
+  dependsOn: string[];
   conflict: ResourceConflictSnapshot | null;
   createdAt: string;
   updatedAt: string;

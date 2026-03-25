@@ -347,12 +347,15 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
       'opsy change create --workspace acme --env prod --summary "Create base network"',
       `opsy change create --workspace acme --env prod --mutations '[{"kind":"create","slug":"network","type":"group"},{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","parent":"network","inputs":{"cidrBlock":"10.0.0.0/16"}}]' --summary "Create grouped network"`,
       `opsy change create --workspace acme --env prod --mutations '[{"kind":"update","slug":"subnet-a","parent":"vpc-b","inputs":{}}]' --summary "Move subnet under new parent"`,
+      `opsy change create --workspace acme --env prod --mutations '[{"kind":"update","slug":"policy","dependsOn":["public-access-block"],"inputs":{}}]' --summary "Make policy wait for public access block"`,
     ],
     whenToUse: [
       "Use this when you want a reviewable draft before applying mutations, especially when the work spans multiple resources.",
     ],
     notes: [
+      'Every mutation object must include `"kind"` (for example `"create"` or `"update"`).',
       'In mutation JSON, use `"parent":"<slug>"` to organize resources under another resource.',
+      'Use `"dependsOn":["<slug>"]` in mutation JSON for explicit dependency ordering when no input ref expresses the dependency.',
       'If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.',
     ],
     nextSteps: [
@@ -373,12 +376,15 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     examples: [
       `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"vpc","inputs":{"enableDnsHostnames":true}}]'`,
       `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"subnet-a","parent":"network","inputs":{}}]'`,
+      `opsy change append abcd1234 --mutations '[{"kind":"update","slug":"policy","dependsOn":["public-access-block"],"inputs":{}}]'`,
     ],
     whenToUse: [
       "Use this after `change create` when you are building up a staged change in multiple steps.",
     ],
     notes: [
+      'Every mutation object must include `"kind"` (for example `"create"` or `"update"`).',
       'Mutation JSON uses `"parent":"<slug>"` for reparenting.',
+      'Mutation JSON uses `"dependsOn":["<slug>"]` for explicit dependency ordering when no input ref expresses the dependency.',
     ],
     nextSteps: [
       "Run `opsy change preview <shortId>` to inspect the updated draft.",
@@ -411,8 +417,11 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     whenToUse: [
       "Use this after you have created or previewed a change and want Opsy to execute it.",
     ],
+    notes: [
+      "If approval is required, the apply does not complete through MCP. Ask a human to open the returned review URL in the Opsy web UI and approve it there.",
+    ],
     nextSteps: [
-      "If approval is required, open the returned review URL. Otherwise inspect the resulting change with `opsy change get <shortId>`.",
+      "If approval is required, stop and ask a human to open the returned review URL in the Opsy web UI and approve it there. Otherwise inspect the resulting change with `opsy change get <shortId>`.",
     ],
   }),
   command({
@@ -462,20 +471,20 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
       "Use this only when you need help finding the exact type token before creating or updating a resource.",
     ],
     nextSteps: [
-      "Run `opsy schema get <type-token>` for one returned type when you need field details.",
+      "Run `opsy schema get <type-token>` only if field names or types are still unclear.",
     ],
   }),
   command({
     id: "schema.get",
     path: ["schema", "get"],
     usage: "opsy schema get <type-token>",
-    summary: "Describe one resource schema.",
+    summary: "Show compact field types for one resource schema.",
     examples: [
       "opsy schema get cloudflare:index/zone:Zone",
       "opsy schema get aws:ec2/vpc:Vpc",
     ],
     whenToUse: [
-      "Use this after `schema list` when you need field details for a specific resource type.",
+      "Use this after `schema list` only when field names, field types, or required references are uncertain.",
     ],
     nextSteps: [
       "Return to `opsy resource create ... --type <type-token>` or `opsy change create ... --mutations <json>` with the schema details in hand.",
@@ -646,7 +655,7 @@ const TOP_LEVEL_HELP = [
   "",
   "Organizing resources:",
   "  Use `--parent <slug>` on `resource create` and `resource update` to place a resource under another resource.",
-  '  In change mutation JSON, use `"parent":"<slug>"`.',
+  '  In change mutation JSON, every mutation object must include `"kind"`, and you can use `"parent":"<slug>"` for hierarchy and `"dependsOn":["<slug>"]` for explicit dependency ordering.',
   '  If you want a folder-like container with no cloud object, create a virtual resource with `type:"group"` first, then parent resources under it.',
   "",
   "More help:",
@@ -816,22 +825,13 @@ export function renderCommandHelp(path: string[]): string {
 export function renderServerInstructions(): string {
   return [
     "Opsy manages infrastructure through workspaces, environments, resources, and changes.",
-    'Use the single `opsy` tool and start with `opsy --help`.',
-    'Then follow the same zero-start flow as the CLI: `opsy workspace list`, `opsy environment list --workspace <slug>`, `opsy resource list --workspace <slug> --env <slug>`, `opsy resource get <slug> --workspace <slug> --env <slug>`, then `opsy change create ...` or `opsy resource create ...`.',
-    'Use `--parent <slug>` on one-off resource mutations to organize resources. In change mutation JSON, use `"parent":"<slug>"`. Create `type:"group"` first when you need a virtual container.',
-    "MCP authentication is handled by the client session, not by `opsy auth login`.",
-    'Use `opsy <noun> <action> --help` whenever you need command-specific usage.',
+    "Tools: opsy_workspace, opsy_environment, opsy_resource, opsy_change, opsy_provider, opsy_schema, opsy_discovery, opsy_observability, opsy_admin.",
+    "Zero-start flow: opsy_workspace list -> opsy_environment list -> opsy_resource list -> opsy_resource get, then opsy_change create or opsy_resource create.",
+    'Resource and change `inputs` follow Pulumi property names for each type (example: `aws:s3/bucket:Bucket` with `{"bucket":"my-bucket"}`). Reach for opsy_schema list/get only when the exact type token, field names, or field types are unclear.',
+    'Use `parent` on resource mutations to organize resources. In change mutation JSON, every mutation object must include `"kind"`, and you can use `"parent":"<slug>"` for hierarchy and `"dependsOn":["<slug>"]` for explicit dependency ordering when no input ref expresses the dependency. Create `type:"group"` first when you need a virtual container.',
+    "MCP authentication is handled by the client session, not by opsy_admin login.",
+    "Pass help: true to any tool to see command-specific usage.",
   ].join("\n");
-}
-
-export function renderToolDescription(): string {
-  return [
-    "Opsy operator tool. Mirrors the CLI grammar.",
-    "Use `opsy --help` and `opsy <noun> <action> --help`.",
-    "Workflow: workspace -> environment -> resource -> change.",
-    'Use `--parent <slug>` to organize resources; in mutation JSON use `"parent":"<slug>"`. Create `type:"group"` when you need a virtual container.',
-    "MCP auth comes from the session, not `opsy auth login`.",
-  ].join(" ");
 }
 
 export type ParsedCommand = {
