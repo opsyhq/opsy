@@ -1,6 +1,6 @@
 {
   "name": "@opsyhq/opsy",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Opsy CLI for agent-driven infrastructure management.",
   "type": "module",
   "homepage": "https://opsy.sh",
