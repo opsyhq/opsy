@@ -1,12 +1,14 @@
 import { Command } from "commander";
 import { DISCOVERY_PROVIDERS, getUnsupportedDiscoveryProviderMessage } from "../catalog";
-import { getToken, getApiUrl } from "../config";
+import { getApiUrl, getEnv, getToken, getWorkspace } from "../config";
 import { apiRequest } from "../client";
 import { formatTable, output } from "../output";
 
 type GlobalFlags = {
   token?: string;
   apiUrl?: string;
+  workspace?: string;
+  env?: string;
   json?: boolean;
   quiet?: boolean;
 };
@@ -93,6 +95,22 @@ function handleCliError(error: unknown, deps: DiscoveryDeps): never {
   return deps.exit(1);
 }
 
+function requireWorkspaceValue(command: Command, value?: string): string {
+  const resolved = getWorkspace({ workspace: value ?? getRootFlags(command).workspace });
+  if (!resolved) {
+    throw new Error("Missing --workspace.");
+  }
+  return resolved;
+}
+
+function requireEnvValue(command: Command, value?: string): string {
+  const resolved = getEnv({ env: value ?? getRootFlags(command).env });
+  if (!resolved) {
+    throw new Error("Missing --env.");
+  }
+  return resolved;
+}
+
 function formatScope(scope: Record<string, string | null> | null): string {
   if (!scope) return "global";
   const parts = Object.entries(scope)
@@ -121,16 +139,18 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("types")
     .description(`List ${config.label} resource types that support discovery`)
-    .requiredOption("--workspace <slug>", "Workspace slug")
-    .requiredOption("--env <slug>", "Environment slug")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--env <slug>", "Environment slug")
     .option("--query <text>", "Filter by resource type")
-    .action(async function (this: Command, opts: { workspace: string; env: string; query?: string }) {
+    .action(async function (this: Command, opts: { workspace?: string; env?: string; query?: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/${config.id}/types${buildQuery({ query: opts.query })}`;
 
       try {
+        const workspace = requireWorkspaceValue(this, opts.workspace);
+        const env = requireEnvValue(this, opts.env);
+        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}/types${buildQuery({ query: opts.query })}`;
         const types = await deps.apiRequest<DiscoveryTypeRow[]>(path, { token, apiUrl });
         if (flags.json) return output(types, flags);
         if (!types.length) {
@@ -149,27 +169,29 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("list")
     .description(`List existing ${config.label} resources`)
-    .requiredOption("--workspace <slug>", "Workspace slug")
-    .requiredOption("--env <slug>", "Environment slug")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--env <slug>", "Environment slug")
     .option("--type <type>", config.typeHelp)
     .option("--location <location>", "Filter by discovery location")
     .option("--region <region>", "AWS-only alias for --location")
     .option("--profile <profileId>", `Use a specific ${config.label} provider profile`)
     .action(async function (
       this: Command,
-      opts: { workspace: string; env: string; type?: string; location?: string; region?: string; profile?: string },
+      opts: { workspace?: string; env?: string; type?: string; location?: string; region?: string; profile?: string },
     ) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const location = opts.location ?? opts.region;
-      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/${config.id}${buildQuery({
-        type: opts.type,
-        location,
-        profileId: opts.profile,
-      })}`;
 
       try {
+        const workspace = requireWorkspaceValue(this, opts.workspace);
+        const env = requireEnvValue(this, opts.env);
+        const location = opts.location ?? opts.region;
+        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}${buildQuery({
+          type: opts.type,
+          location,
+          profileId: opts.profile,
+        })}`;
         const resources = await deps.apiRequest<DiscoveryResourceRow[]>(path, { token, apiUrl });
         if (flags.json) return output(resources, flags);
         if (!resources.length) {
@@ -194,26 +216,28 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("inspect")
     .description(`Inspect a single ${config.label} resource`)
-    .requiredOption("--workspace <slug>", "Workspace slug")
-    .requiredOption("--env <slug>", "Environment slug")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--env <slug>", "Environment slug")
     .requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription)
     .requiredOption("--type <type>", "Pulumi token or discovery type")
     .option("--profile <profileId>", `Use a specific ${config.label} provider profile`)
     .action(async function (
       this: Command,
-      opts: { workspace: string; env: string; type: string; profile?: string } & Record<string, string>,
+      opts: { workspace?: string; env?: string; type: string; profile?: string } & Record<string, string | undefined>,
     ) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
-      const providerId = getInspectOptionValue(opts, config.inspectFlag);
-      const path = `/workspaces/${opts.workspace}/environments/${opts.env}/discover/${config.id}/inspect${buildQuery({
-        providerId,
-        type: opts.type,
-        profileId: opts.profile,
-      })}`;
 
       try {
+        const workspace = requireWorkspaceValue(this, opts.workspace);
+        const env = requireEnvValue(this, opts.env);
+        const providerId = getInspectOptionValue(opts as Record<string, string>, config.inspectFlag);
+        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}/inspect${buildQuery({
+          providerId,
+          type: opts.type,
+          profileId: opts.profile,
+        })}`;
         const detail = await deps.apiRequest<unknown>(path, { token, apiUrl });
         output(detail, flags);
       } catch (error) {
@@ -224,18 +248,20 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("import")
     .description(`Import discovered ${config.label} resources`)
-    .requiredOption("--workspace <slug>", "Workspace slug")
-    .requiredOption("--env <slug>", "Environment slug")
+    .option("--workspace <slug>", "Workspace slug")
+    .option("--env <slug>", "Environment slug")
     .requiredOption("--items <json>", "JSON array of {providerId, type, slug, importId?}")
-    .action(async function (this: Command, opts: { workspace: string; env: string; items: string }) {
+    .action(async function (this: Command, opts: { workspace?: string; env?: string; items: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
 
       try {
+        const workspace = requireWorkspaceValue(this, opts.workspace);
+        const env = requireEnvValue(this, opts.env);
         const items = JSON.parse(opts.items);
         const result = await deps.apiRequest<any>(
-          `/workspaces/${opts.workspace}/environments/${opts.env}/discover/${config.id}/import`,
+          `/workspaces/${workspace}/environments/${env}/discover/${config.id}/import`,
           { method: "POST", body: { items }, token, apiUrl },
         );
         if (flags.json) return output(result, flags);

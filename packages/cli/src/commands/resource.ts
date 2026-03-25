@@ -6,7 +6,9 @@ import {
   handleCliError,
   parseJsonFlag,
   requireArgumentValue,
+  requireEnvValue,
   requireOptionValue,
+  requireWorkspaceValue,
   type CliDeps,
 } from "./common";
 import { formatTable, output } from "../output";
@@ -24,8 +26,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, opts: { workspace?: string; env?: string; parent?: string; detailed?: boolean }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
           const path = `/workspaces/${workspace}/environments/${env}/resources${opts.parent ? `?parent=${opts.parent}` : ""}`;
@@ -53,8 +55,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string; live?: boolean }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -85,8 +87,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       ) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireOptionValue(opts.slug, "slug");
           const type = requireOptionValue(opts.type, "type");
           const inputs = parseJsonFlag(requireOptionValue(opts.inputs, "inputs"), "inputs");
@@ -129,8 +131,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       ) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const inputs = parseJsonFlag(requireOptionValue(opts.inputs, "inputs"), "inputs");
           const token = deps.getToken(flags);
@@ -168,8 +170,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string; recursive?: boolean }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -199,8 +201,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -224,8 +226,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -254,8 +256,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -284,8 +286,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
@@ -315,8 +317,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string; operation?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const operation = requireOptionValue(opts.operation, "operation");
           const token = deps.getToken(flags);
@@ -347,8 +349,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, slug: string | undefined, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const resourceSlug = requireArgumentValue(slug, "resource slug");
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);

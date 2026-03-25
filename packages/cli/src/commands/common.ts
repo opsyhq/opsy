@@ -1,12 +1,14 @@
 import type { Command } from "commander";
 import { findCommandSpec, renderCommandErrorMessage } from "@opsy/contracts";
 import { ApiRequestError } from "../client";
-import { getApiUrl, getToken } from "../config";
+import { getApiUrl, getEnv, getToken, getWorkspace } from "../config";
 import { apiRequest } from "../client";
 
 export type GlobalFlags = {
   token?: string;
   apiUrl?: string;
+  workspace?: string;
+  env?: string;
   json?: boolean;
   quiet?: boolean;
 };
@@ -64,6 +66,28 @@ export function parseJsonFlag<T>(value: string, label: string): T {
   } catch {
     throw new Error(`Invalid JSON in --${label}.`);
   }
+}
+
+export function resolveWorkspaceValue(command: Command, value?: string): string | undefined {
+  const rootFlags = getRootFlags(command);
+  return getWorkspace({
+    workspace: value ?? rootFlags.workspace,
+  });
+}
+
+export function resolveEnvValue(command: Command, value?: string): string | undefined {
+  const rootFlags = getRootFlags(command);
+  return getEnv({
+    env: value ?? rootFlags.env,
+  });
+}
+
+export function requireWorkspaceValue(command: Command, value?: string): string {
+  return requireOptionValue(resolveWorkspaceValue(command, value), "workspace");
+}
+
+export function requireEnvValue(command: Command, value?: string): string {
+  return requireOptionValue(resolveEnvValue(command, value), "env");
 }
 
 export function addSharedHelp(command: Command, path: string[]) {

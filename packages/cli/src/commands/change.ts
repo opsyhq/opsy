@@ -2,11 +2,13 @@ import { Command } from "commander";
 import {
   addSharedHelp,
   defaultCliDeps,
+  requireEnvValue,
   getRootFlags,
   handleCliError,
   parseJsonFlag,
   requireArgumentValue,
   requireOptionValue,
+  requireWorkspaceValue,
   type CliDeps,
 } from "./common";
 import { formatTable, output } from "../output";
@@ -22,8 +24,8 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, opts: { workspace?: string; env?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
           const changes = await deps.apiRequest<any[]>(
@@ -71,8 +73,8 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
       .action(async function (this: Command, opts: { workspace?: string; env?: string; mutations?: string; summary?: string }) {
         const flags = getRootFlags(this);
         try {
-          const workspace = requireOptionValue(opts.workspace, "workspace");
-          const env = requireOptionValue(opts.env, "env");
+          const workspace = requireWorkspaceValue(this, opts.workspace);
+          const env = requireEnvValue(this, opts.env);
           const body: Record<string, unknown> = {};
           if (opts.summary) body.summary = opts.summary;
           if (opts.mutations) body.mutations = parseJsonFlag(opts.mutations, "mutations");

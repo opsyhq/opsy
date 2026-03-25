@@ -112,6 +112,44 @@ describe("observability CLI command", () => {
     }]);
   });
 
+  test("observability uses context defaults when workspace and env are omitted", async () => {
+    const paths: string[] = [];
+    const previousWorkspace = process.env.OPSY_WORKSPACE;
+    const previousEnv = process.env.OPSY_ENV;
+    process.env.OPSY_WORKSPACE = "acme";
+    process.env.OPSY_ENV = "prod";
+
+    try {
+      const program = createProgram(createObservabilityCommand({
+        apiRequest: async (path: string) => {
+          paths.push(path);
+          return { items: [] };
+        },
+        getToken: () => "test-token",
+        getApiUrl: () => "http://localhost:4000",
+        log: () => {},
+        error: () => {},
+        exit: ((code: number) => {
+          throw new Error(`exit:${code}`);
+        }) as any,
+      }));
+
+      await program.parseAsync(
+        ["node", "opsy", "observability", "aws", "logs", "groups"],
+        { from: "node" },
+      );
+
+      expect(paths).toEqual([
+        "/workspaces/acme/environments/prod/observe/aws/logs/groups",
+      ]);
+    } finally {
+      if (previousWorkspace === undefined) delete process.env.OPSY_WORKSPACE;
+      else process.env.OPSY_WORKSPACE = previousWorkspace;
+      if (previousEnv === undefined) delete process.env.OPSY_ENV;
+      else process.env.OPSY_ENV = previousEnv;
+    }
+  });
+
   test("--json prints the raw response payload", async () => {
     const printed: string[] = [];
     console.log = (message?: unknown) => {

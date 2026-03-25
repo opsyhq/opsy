@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { renderCommandHelp } from "@opsy/contracts";
 import { createChangeCommand } from "./change";
+import { createContextCommand } from "./context";
+import { createEnvironmentCommand } from "./environment";
 import { createFeedbackCommand } from "./feedback";
 import { createProviderCommand } from "./provider";
 import { createResourceCommand } from "./resource";
@@ -102,6 +107,32 @@ describe("noun-first CLI surface", () => {
     expect(requests).toEqual([{ path: "/workspaces/acme/environments/prod/resources", method: undefined }]);
   });
 
+  test("resource list falls back to saved context", async () => {
+    const requests: Array<{ path: string; method: string | undefined }> = [];
+    const tempDir = mkdtempSync(join(tmpdir(), "opsy-cli-"));
+    const configPath = join(tempDir, "config.json");
+    const previousConfigPath = process.env.OPSY_CONFIG_PATH;
+    writeFileSync(configPath, JSON.stringify({ workspace: "acme", env: "prod" }));
+    process.env.OPSY_CONFIG_PATH = configPath;
+
+    try {
+      const program = createProgram([createResourceCommand({
+        ...createDeps(),
+        apiRequest: async (path: string, opts: any) => {
+          requests.push({ path, method: opts?.method });
+          return [];
+        },
+      })]);
+
+      await program.parseAsync(["node", "opsy", "resource", "list"], { from: "node" });
+      expect(requests).toEqual([{ path: "/workspaces/acme/environments/prod/resources", method: undefined }]);
+    } finally {
+      if (previousConfigPath === undefined) delete process.env.OPSY_CONFIG_PATH;
+      else process.env.OPSY_CONFIG_PATH = previousConfigPath;
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test("provider get uses the provider endpoint", async () => {
     const requests: string[] = [];
     const program = createProgram([createProviderCommand({
@@ -115,6 +146,138 @@ describe("noun-first CLI surface", () => {
     await program.parseAsync(["node", "opsy", "--json", "provider", "get", "prov-1"], { from: "node" });
 
     expect(requests).toEqual(["/providers/prov-1"]);
+  });
+
+  test("environment provider add uses the env provider endpoint", async () => {
+    const requests: Array<{ path: string; method: string | undefined; body?: unknown }> = [];
+    const program = createProgram([createEnvironmentCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method, body: opts?.body });
+        return { providerProfile: { id: "prov-1" } };
+      },
+    })]);
+
+    await program.parseAsync([
+      "node",
+      "opsy",
+      "environment",
+      "provider",
+      "add",
+      "--workspace",
+      "acme",
+      "--env",
+      "prod",
+      "--provider",
+      "aws",
+      "--name",
+      "main",
+      "--config",
+      '{"AWS_REGION":"us-east-1"}',
+    ], { from: "node" });
+
+    expect(requests).toEqual([{
+      path: "/workspaces/acme/environments/prod/providers",
+      method: "POST",
+      body: {
+        providerPkg: "aws",
+        profileName: "main",
+        config: { AWS_REGION: "us-east-1" },
+      },
+    }]);
+  });
+
+  test("environment provider attach uses the env provider endpoint", async () => {
+    const requests: Array<{ path: string; method: string | undefined; body?: unknown }> = [];
+    const program = createProgram([createEnvironmentCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method, body: opts?.body });
+        return { profileId: "prov-1" };
+      },
+    })]);
+
+    await program.parseAsync([
+      "node",
+      "opsy",
+      "environment",
+      "provider",
+      "attach",
+      "--workspace",
+      "acme",
+      "--env",
+      "prod",
+      "--profile",
+      "prov-1",
+    ], { from: "node" });
+
+    expect(requests).toEqual([{
+      path: "/workspaces/acme/environments/prod/providers",
+      method: "POST",
+      body: { profileId: "prov-1" },
+    }]);
+  });
+
+  test("environment provider list uses the env provider endpoint", async () => {
+    const requests: Array<{ path: string; method: string | undefined }> = [];
+    const program = createProgram([createEnvironmentCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method });
+        return [];
+      },
+    })]);
+
+    await program.parseAsync([
+      "node",
+      "opsy",
+      "environment",
+      "provider",
+      "list",
+      "--workspace",
+      "acme",
+      "--env",
+      "prod",
+    ], { from: "node" });
+
+    expect(requests).toEqual([{ path: "/workspaces/acme/environments/prod/providers", method: undefined }]);
+  });
+
+  test("context use, show, and clear manage saved scope", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "opsy-context-"));
+    const configPath = join(tempDir, "config.json");
+    const previousConfigPath = process.env.OPSY_CONFIG_PATH;
+    const originalConsoleLog = console.log;
+    const printed: string[] = [];
+    process.env.OPSY_CONFIG_PATH = configPath;
+    console.log = (message?: unknown) => {
+      printed.push(String(message ?? ""));
+    };
+
+    try {
+      const program = createProgram([createContextCommand()]);
+      await program.parseAsync(
+        ["node", "opsy", "context", "use", "--workspace", "acme", "--env", "prod"],
+        { from: "node" },
+      );
+
+      expect(JSON.parse(readFileSync(configPath, "utf8"))).toMatchObject({
+        workspace: "acme",
+        env: "prod",
+      });
+
+      await program.parseAsync(["node", "opsy", "context", "show"], { from: "node" });
+      expect(printed.join("\n")).toContain("Workspace: acme");
+      expect(printed.join("\n")).toContain("Env: prod");
+
+      await program.parseAsync(["node", "opsy", "context", "clear"], { from: "node" });
+      expect(JSON.parse(readFileSync(configPath, "utf8"))).toEqual({});
+    } finally {
+      console.log = originalConsoleLog;
+      if (previousConfigPath === undefined) delete process.env.OPSY_CONFIG_PATH;
+      else process.env.OPSY_CONFIG_PATH = previousConfigPath;
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test("change apply prints approval guidance when blocked", async () => {

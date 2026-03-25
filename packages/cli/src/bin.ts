@@ -12,6 +12,7 @@ import { schemaCmd } from "./commands/schema";
 import { feedbackCmd } from "./commands/feedback";
 import { discoveryCmd } from "./commands/discovery";
 import { observabilityCmd } from "./commands/observability";
+import { contextCmd } from "./commands/context";
 
 function getCliVersion(): string {
   try {
@@ -65,6 +66,7 @@ program.addCommand(schemaCmd);
 program.addCommand(discoveryCmd);
 program.addCommand(observabilityCmd);
 program.addCommand(feedbackCmd);
+program.addCommand(contextCmd);
 program.configureHelp({
   formatHelp: () => renderCommandHelp([]),
 });
