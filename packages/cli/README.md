@@ -1,6 +1,6 @@
 # Opsy CLI
 
-Opsy is an agent-friendly infrastructure control plane. The `opsy` CLI exposes the same operator surface that Opsy MCP uses: explicit workspaces, environments, resources, and changes.
+Opsy is an agent-friendly infrastructure control plane. The `opsy` CLI exposes the same operator surface that Opsy MCP uses: explicit projects, resources, and changes.
 
 ## Install
 
@@ -14,10 +14,9 @@ Start from clean discovery. Do not assume a remembered target.
 
 ```bash
 opsy auth login --token <pat>
-opsy workspace list
-opsy environment list --workspace <workspace-slug>
-opsy resource list --workspace <workspace-slug> --env <env-slug>
-opsy resource get <resource-slug> --workspace <workspace-slug> --env <env-slug>
+opsy project list
+opsy resource list --project <project-slug>
+opsy resource get <resource-slug> --project <project-slug>
 ```
 
 `resource list` returns root resources first. Add `--parent <slug>` to walk down the tree.
@@ -29,7 +28,7 @@ Use `--parent <slug>` on `resource create` and `resource update` to organize res
 Use a draft change when the work should be reviewable or span multiple mutations:
 
 ```bash
-opsy change create --workspace <workspace-slug> --env <env-slug> --summary "Create base network"
+opsy change create --project <project-slug> --summary "Create base network"
 opsy change append <shortId> --mutations '[...]'
 opsy change preview <shortId>
 opsy change apply <shortId>
@@ -38,22 +37,23 @@ opsy change apply <shortId>
 Example with a virtual group and explicit parenting:
 
 ```bash
-opsy change create --workspace <workspace-slug> --env <env-slug> --summary "Create grouped network" \
+opsy change create --project <project-slug> --summary "Create grouped network" \
   --mutations '[{"kind":"create","slug":"network","type":"group"},{"kind":"create","slug":"vpc","type":"aws:ec2/vpc:Vpc","parent":"network","inputs":{"cidrBlock":"10.0.0.0/16"}}]'
 ```
 
-Use one-off resource mutations when you want a single mutation and immediate apply if policy allows:
+Use one-off resource mutations when you want a single mutation with an immediate preview. Pass `--auto-apply` when you want the convenience command to continue into apply:
 
 ```bash
-opsy resource create --workspace <workspace-slug> --env <env-slug> --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'
-opsy resource update <resource-slug> --workspace <workspace-slug> --env <env-slug> --inputs '{"key":"value"}'
-opsy resource delete <resource-slug> --workspace <workspace-slug> --env <env-slug>
+opsy resource create --project <project-slug> --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}'
+opsy resource update <resource-slug> --project <project-slug> --inputs '{"key":"value"}'
+opsy resource delete <resource-slug> --project <project-slug>
+opsy resource create --project <project-slug> --slug vpc --type aws:ec2/vpc:Vpc --inputs '{"cidrBlock":"10.0.0.0/16"}' --auto-apply
 ```
 
 For reparenting, use:
 
 ```bash
-opsy resource update <resource-slug> --workspace <workspace-slug> --env <env-slug> --parent <new-parent-slug> --inputs '{}'
+opsy resource update <resource-slug> --project <project-slug> --parent <new-parent-slug> --inputs '{}'
 ```
 
 ## Help
@@ -62,7 +62,7 @@ Use the product surface itself as the guide:
 
 ```bash
 opsy --help
-opsy workspace list --help
+opsy project list --help
 opsy change create --help
 ```
 

@@ -1,14 +1,13 @@
 import { Command } from "commander";
 import { DISCOVERY_PROVIDERS, getUnsupportedDiscoveryProviderMessage } from "../catalog";
-import { getApiUrl, getEnv, getToken, getWorkspace } from "../config";
+import { getApiUrl, getProject, getToken } from "../config";
 import { apiRequest } from "../client";
 import { formatTable, output } from "../output";
 
 type GlobalFlags = {
   token?: string;
   apiUrl?: string;
-  workspace?: string;
-  env?: string;
+  project?: string;
   json?: boolean;
   quiet?: boolean;
 };
@@ -34,7 +33,6 @@ type DiscoveryResourceRow = {
   location: string | null;
   scope: Record<string, string | null> | null;
   pulumiType: string | undefined;
-  importId?: string;
 };
 
 type DiscoveryProviderCommandConfig = {
@@ -59,8 +57,8 @@ const discoveryProviderConfigs: DiscoveryProviderCommandConfig[] = [
     id: "aws",
     label: "AWS",
     typeHelp: "Filter by AWS discovery type or Pulumi token",
-    inspectFlag: "cloud-id",
-    inspectFlagDescription: "AWS cloud ID",
+    inspectFlag: "provider-id",
+    inspectFlagDescription: "AWS provider ID",
   },
   {
     id: "cloudflare",
@@ -95,18 +93,10 @@ function handleCliError(error: unknown, deps: DiscoveryDeps): never {
   return deps.exit(1);
 }
 
-function requireWorkspaceValue(command: Command, value?: string): string {
-  const resolved = getWorkspace({ workspace: value ?? getRootFlags(command).workspace });
+function requireProjectValue(command: Command, value?: string): string {
+  const resolved = getProject({ project: value ?? getRootFlags(command).project });
   if (!resolved) {
-    throw new Error("Missing --workspace.");
-  }
-  return resolved;
-}
-
-function requireEnvValue(command: Command, value?: string): string {
-  const resolved = getEnv({ env: value ?? getRootFlags(command).env });
-  if (!resolved) {
-    throw new Error("Missing --env.");
+    throw new Error("Missing --project.");
   }
   return resolved;
 }
@@ -121,7 +111,7 @@ function formatScope(scope: Record<string, string | null> | null): string {
 
 function getInspectOptionValue(opts: Record<string, string>, flagName: string): string | undefined {
   const camelKey = flagName.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-  return opts[camelKey] ?? opts.providerId ?? opts.cloudId;
+  return opts[camelKey] ?? opts.providerId;
 }
 
 function addProviderDiscoveryCommands(
@@ -139,18 +129,16 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("types")
     .description(`List ${config.label} resource types that support discovery`)
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .option("--query <text>", "Filter by resource type")
-    .action(async function (this: Command, opts: { workspace?: string; env?: string; query?: string }) {
+    .action(async function (this: Command, opts: { project?: string; query?: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}/types${buildQuery({ query: opts.query })}`;
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/discover/${config.id}/types${buildQuery({ query: opts.query })}`;
         const types = await deps.apiRequest<DiscoveryTypeRow[]>(path, { token, apiUrl });
         if (flags.json) return output(types, flags);
         if (!types.length) {
@@ -169,25 +157,23 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("list")
     .description(`List existing ${config.label} resources`)
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .option("--type <type>", config.typeHelp)
     .option("--location <location>", "Filter by discovery location")
     .option("--region <region>", "AWS-only alias for --location")
-    .option("--profile <profileId>", `Use a specific ${config.label} provider profile`)
+    .option("--profile <profileId>", `Use a specific ${config.label} integration`)
     .action(async function (
       this: Command,
-      opts: { workspace?: string; env?: string; type?: string; location?: string; region?: string; profile?: string },
+      opts: { project?: string; type?: string; location?: string; region?: string; profile?: string },
     ) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         const location = opts.location ?? opts.region;
-        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}${buildQuery({
+        const path = `/projects/${project}/discover/${config.id}${buildQuery({
           type: opts.type,
           location,
           profileId: opts.profile,
@@ -216,24 +202,22 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("inspect")
     .description(`Inspect a single ${config.label} resource`)
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription)
     .requiredOption("--type <type>", "Pulumi token or discovery type")
-    .option("--profile <profileId>", `Use a specific ${config.label} provider profile`)
+    .option("--profile <profileId>", `Use a specific ${config.label} integration`)
     .action(async function (
       this: Command,
-      opts: { workspace?: string; env?: string; type: string; profile?: string } & Record<string, string | undefined>,
+      opts: { project?: string; type: string; profile?: string } & Record<string, string | undefined>,
     ) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         const providerId = getInspectOptionValue(opts as Record<string, string>, config.inspectFlag);
-        const path = `/workspaces/${workspace}/environments/${env}/discover/${config.id}/inspect${buildQuery({
+        const path = `/projects/${project}/discover/${config.id}/inspect${buildQuery({
           providerId,
           type: opts.type,
           profileId: opts.profile,
@@ -248,20 +232,18 @@ function addProviderDiscoveryCommands(
   providerCmd
     .command("import")
     .description(`Import discovered ${config.label} resources`)
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .requiredOption("--items <json>", "JSON array of {providerId, type, slug, importId?}")
-    .action(async function (this: Command, opts: { workspace?: string; env?: string; items: string }) {
+    .option("--project <slug>", "Project slug")
+    .requiredOption("--items <json>", "JSON array of {providerId, type, slug}")
+    .action(async function (this: Command, opts: { project?: string; items: string }) {
       const flags = getRootFlags(this);
       const token = deps.getToken(flags);
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         const items = JSON.parse(opts.items);
         const result = await deps.apiRequest<any>(
-          `/workspaces/${workspace}/environments/${env}/discover/${config.id}/import`,
+          `/projects/${project}/discover/${config.id}/import`,
           { method: "POST", body: { items }, token, apiUrl },
         );
         if (flags.json) return output(result, flags);

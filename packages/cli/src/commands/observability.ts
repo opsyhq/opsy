@@ -6,14 +6,13 @@ import {
   renderObserveSupportedProviders,
 } from "../catalog";
 import { ApiRequestError, apiRequest } from "../client";
-import { getApiUrl, getEnv, getToken, getWorkspace } from "../config";
+import { getApiUrl, getProject, getToken } from "../config";
 import { formatTable, output } from "../output";
 
 type GlobalFlags = {
   token?: string;
   apiUrl?: string;
-  workspace?: string;
-  env?: string;
+  project?: string;
   json?: boolean;
   quiet?: boolean;
 };
@@ -80,18 +79,10 @@ function handleCliError(error: unknown, deps: ObservabilityDeps, flags?: GlobalF
   return deps.exit(1);
 }
 
-function requireWorkspaceValue(command: Command, value?: string): string {
-  const resolved = getWorkspace({ workspace: value ?? getRootFlags(command).workspace });
+function requireProjectValue(command: Command, value?: string): string {
+  const resolved = getProject({ project: value ?? getRootFlags(command).project });
   if (!resolved) {
-    throw new Error("Missing --workspace.");
-  }
-  return resolved;
-}
-
-function requireEnvValue(command: Command, value?: string): string {
-  const resolved = getEnv({ env: value ?? getRootFlags(command).env });
-  if (!resolved) {
-    throw new Error("Missing --env.");
+    throw new Error("Missing --project.");
   }
   return resolved;
 }
@@ -159,16 +150,14 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const groupsCmd = new Command("groups")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--project <slug>", "Project slug")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--name-prefix <prefix>", "Filter by log group name prefix")
     .option("--limit <n>", "Page size")
     .option("--next-token <token>", "Pagination token")
     .action(async function (this: Command, opts: {
-      workspace: string;
-      env: string;
+      project: string;
       profile?: string;
       region?: string;
       namePrefix?: string;
@@ -180,9 +169,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/logs/groups${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/logs/groups${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           namePrefix: opts.namePrefix,
@@ -212,10 +200,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(groupsCmd);
 
   const tailCmd = new Command("tail")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--log-group <name>", "Log group name")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--log-stream <name>", "Filter to one log stream")
     .option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern")
@@ -228,9 +215,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/logs/tail${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/logs/tail${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           logGroup: opts.logGroup,
@@ -251,10 +237,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(tailCmd);
 
   const eventsCmd = new Command("events")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--log-group <name>", "Log group name")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--log-stream <name>", "Filter to one log stream")
     .option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern")
@@ -268,9 +253,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/logs/events${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/logs/events${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           logGroup: opts.logGroup,
@@ -292,11 +276,10 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   logsCmd.addCommand(eventsCmd);
 
   const queryCmd = new Command("query")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--log-groups <csv>", "Comma-separated log groups")
     .requiredOption("--query-string <text>", "Logs Insights query")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--since <duration-or-iso>", "Range start")
     .option("--until <duration-or-iso>", "Range end")
@@ -308,10 +291,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         const data = await deps.apiRequest<any>(
-          `/workspaces/${workspace}/environments/${env}/observe/aws/logs/query`,
+          `/projects/${project}/observe/aws/logs/query`,
           {
             method: "POST",
             body: {
@@ -352,9 +334,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const metricsListCmd = new Command("list")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--project <slug>", "Project slug")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--namespace <name>", "Metric namespace")
     .option("--metric-name <name>", "Metric name")
@@ -367,11 +348,10 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         if (opts.dimensions) parseJsonArray(opts.dimensions, "--dimensions");
         const data = await deps.apiRequest<any>(
-          `/workspaces/${workspace}/environments/${env}/observe/aws/metrics${buildQuery({
+          `/projects/${project}/observe/aws/metrics${buildQuery({
             profileId: opts.profile,
             region: opts.region,
             namespace: opts.namespace,
@@ -403,10 +383,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   metricsCmd.addCommand(metricsListCmd);
 
   const metricsQueryCmd = new Command("query")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--queries <json-array>", "JSON array of MetricDataQueries")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--since <duration-or-iso>", "Range start")
     .option("--until <duration-or-iso>", "Range end")
@@ -418,11 +397,10 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
+        const project = requireProjectValue(this, opts.project);
         const queries = parseJsonArray(opts.queries, "--queries");
         const data = await deps.apiRequest<any>(
-          `/workspaces/${workspace}/environments/${env}/observe/aws/metrics/query`,
+          `/projects/${project}/observe/aws/metrics/query`,
           {
             method: "POST",
             body: {
@@ -462,9 +440,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   });
 
   const alarmsListCmd = new Command("list")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--project <slug>", "Project slug")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA")
     .option("--type <type>", "metric, composite, or all", "all")
@@ -477,9 +454,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/alarms${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/alarms${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           state: opts.state,
@@ -511,10 +487,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   alarmsCmd.addCommand(alarmsListCmd);
 
   const alarmsDetailCmd = new Command("detail")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .action(async function (this: Command, opts: any) {
       const flags = getRootFlags(this);
@@ -522,9 +497,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/alarms/detail${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/alarms/detail${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           alarmName: opts.alarmName,
@@ -539,10 +513,9 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
   alarmsCmd.addCommand(alarmsDetailCmd);
 
   const alarmsHistoryCmd = new Command("history")
-    .option("--workspace <slug>", "Workspace slug")
-    .option("--env <slug>", "Environment slug")
+    .option("--project <slug>", "Project slug")
     .requiredOption("--alarm-name <name>", "Alarm name")
-    .option("--profile <profileId>", "Use a specific AWS provider profile")
+    .option("--profile <profileId>", "Use a specific AWS integration")
     .option("--region <aws-region>", "Override the AWS region")
     .option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action")
     .option("--since <duration-or-iso>", "Range start")
@@ -555,9 +528,8 @@ export function createObservabilityCommand(deps: ObservabilityDeps = defaultDeps
       const apiUrl = deps.getApiUrl(flags);
 
       try {
-        const workspace = requireWorkspaceValue(this, opts.workspace);
-        const env = requireEnvValue(this, opts.env);
-        const path = `/workspaces/${workspace}/environments/${env}/observe/aws/alarms/history${buildQuery({
+        const project = requireProjectValue(this, opts.project);
+        const path = `/projects/${project}/observe/aws/alarms/history${buildQuery({
           profileId: opts.profile,
           region: opts.region,
           alarmName: opts.alarmName,

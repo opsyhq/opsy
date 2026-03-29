@@ -1,20 +1,20 @@
 import type { Command } from "commander";
 import { findCommandSpec, renderCommandErrorMessage } from "@opsy/contracts";
-import { ApiRequestError } from "../client";
-import { getApiUrl, getEnv, getToken, getWorkspace } from "../config";
+import { ApiRequestError, apiStream } from "../client";
+import { getApiUrl, getProject, getToken } from "../config";
 import { apiRequest } from "../client";
 
 export type GlobalFlags = {
   token?: string;
   apiUrl?: string;
-  workspace?: string;
-  env?: string;
+  project?: string;
   json?: boolean;
   quiet?: boolean;
 };
 
 export type CliDeps = {
   apiRequest: typeof apiRequest;
+  apiStream: typeof apiStream;
   getToken: typeof getToken;
   getApiUrl: typeof getApiUrl;
   log: (message?: string) => void;
@@ -24,6 +24,7 @@ export type CliDeps = {
 
 export const defaultCliDeps: CliDeps = {
   apiRequest,
+  apiStream,
   getToken,
   getApiUrl,
   log: (message?: string) => console.log(message),
@@ -68,26 +69,15 @@ export function parseJsonFlag<T>(value: string, label: string): T {
   }
 }
 
-export function resolveWorkspaceValue(command: Command, value?: string): string | undefined {
+export function resolveProjectValue(command: Command, value?: string): string | undefined {
   const rootFlags = getRootFlags(command);
-  return getWorkspace({
-    workspace: value ?? rootFlags.workspace,
+  return getProject({
+    project: value ?? rootFlags.project,
   });
 }
 
-export function resolveEnvValue(command: Command, value?: string): string | undefined {
-  const rootFlags = getRootFlags(command);
-  return getEnv({
-    env: value ?? rootFlags.env,
-  });
-}
-
-export function requireWorkspaceValue(command: Command, value?: string): string {
-  return requireOptionValue(resolveWorkspaceValue(command, value), "workspace");
-}
-
-export function requireEnvValue(command: Command, value?: string): string {
-  return requireOptionValue(resolveEnvValue(command, value), "env");
+export function requireProjectValue(command: Command, value?: string): string {
+  return requireOptionValue(resolveProjectValue(command, value), "project");
 }
 
 export function addSharedHelp(command: Command, path: string[]) {

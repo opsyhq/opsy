@@ -10,46 +10,48 @@ opsy auth whoami
 opsy auth logout
 ```
 
-Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`
+Environment variables: `OPSY_TOKEN`, `OPSY_API_URL`, `OPSY_PROJECT`
 
-## Workspaces
-
-```bash
-opsy workspace list
-opsy workspace get <slug>
-opsy workspace create --slug <slug> --name <name>
-```
-
-## Environments
+## Projects
 
 ```bash
-opsy environment list --workspace <slug>
-opsy environment get <slug> --workspace <slug>
-opsy environment create --workspace <slug> --slug <slug>
+opsy project list
+opsy project get <slug>
+opsy project create --slug <slug> --name <name>
+opsy project delete <slug>
 ```
 
 ## Resources
 
 ```bash
-opsy resource list --workspace <slug> --env <slug> [--parent <slug>] [--detailed]
-opsy resource get <slug> --workspace <slug> --env <slug> [--live]
-opsy resource create --workspace <slug> --env <slug> --slug <slug> --type <token> --inputs <json> [--parent <slug>]
-opsy resource update <slug> --workspace <slug> --env <slug> --inputs <json>
-opsy resource delete <slug> --workspace <slug> --env <slug> [--recursive]
-opsy resource refresh <slug> --workspace <slug> --env <slug>
-opsy resource diff <slug> --workspace <slug> --env <slug>
-opsy resource accept-live <slug> --workspace <slug> --env <slug>
-opsy resource reconcile <slug> --workspace <slug> --env <slug>
-opsy resource restore <slug> --workspace <slug> --env <slug> --operation <id>
-opsy resource history <slug> --workspace <slug> --env <slug>
+opsy resource list --project <slug> [--parent <slug>] [--detailed]
+opsy resource discover --project <slug> [--provider <provider>] [--type <type>]
+opsy resource get <slug> --project <slug>
+opsy resource read [<slug>] --project <slug> [--type <type> --provider-id <id> --provider <provider>]
+opsy resource create --project <slug> --slug <slug> --type <token> --inputs <json> [--parent <slug>] [--depends-on <json>] [--auto-apply]
+opsy resource update <slug> --project <slug> --inputs <json> [--remove-input-paths <json>] [--parent <slug>] [--depends-on <json>] [--auto-apply]
+opsy resource delete [<slug>] --project <slug> [--recursive] [--auto-apply] [--type <type> --provider-id <id>]
+opsy resource import --project <slug> --slug <slug> --type <type> --provider-id <id>
+opsy resource refresh <slug> --project <slug>
+opsy resource diff <slug> --project <slug>
+opsy resource accept-live <slug> --project <slug>
+opsy resource reconcile <slug> --project <slug>
+opsy resource restore <slug> --project <slug> --operation <id>
+opsy resource history <slug> --project <slug>
 ```
+
+Notes:
+- `resource create`, `resource update`, and `resource delete` are preview-first. They return a change preview by default and include the next explicit `change apply` step. Pass `--auto-apply` to continue into apply immediately.
+- `opsy resource accept-live` requires an `out_of_sync` resource with a recorded conflict snapshot and updates desired inputs immediately.
+- `opsy resource reconcile` requires an `out_of_sync` resource with recorded live inputs and creates a reviewable change that adopts those live inputs.
+- If `resource reconcile` says there is no recorded live input snapshot to promote, refresh drift first and retry.
 
 ## Changes
 
 ```bash
-opsy change create --workspace <slug> --env <slug> [--summary <text>] [--mutations <json>]
+opsy change create --project <slug> [--summary <text>] [--mutations <json>]
 opsy change append <short-id> --mutations <json> [--summary <text>]
-opsy change list --workspace <slug> --env <slug>
+opsy change list --project <slug>
 opsy change get <short-id>
 opsy change preview <short-id>
 opsy change apply <short-id>
@@ -57,12 +59,18 @@ opsy change discard <short-id>
 opsy change retry <short-id>
 ```
 
+## Integrations
+
+```bash
+opsy integration list
+opsy integration get <id>
+opsy integration create --provider <pkg> --name <name> --config <json>
+opsy integration delete <id>
+```
+
 ## Schema
 
 ```bash
-opsy provider list
-opsy provider get <id>
-opsy provider create --provider <pkg> --name <name> --config <json>
 opsy schema list --provider <pkg> [--query <text>]
 opsy schema get <token>
 ```
@@ -71,25 +79,29 @@ opsy schema get <token>
 
 ```bash
 opsy discovery
-opsy discovery aws types --workspace <slug> --env <slug> [--query <text>]
-opsy discovery aws list --workspace <slug> --env <slug> [--type <reType>] [--region <region>] [--profile <profileId>]
-opsy discovery aws inspect --workspace <slug> --env <slug> --cloud-id <id> --type <type> [--profile <profileId>]
-opsy discovery aws import --workspace <slug> --env <slug> --items <json>
+opsy discovery aws types --project <slug> [--query <text>]
+opsy discovery aws list --project <slug> [--type <type>] [--region <region>]
+opsy discovery aws inspect --project <slug> --provider-id <id> --type <type>  # compatibility alias; prefer `opsy resource read`
+opsy discovery aws import --project <slug> --items <json>
+opsy discovery cloudflare list --project <slug> [--type <type>]
 ```
+
+Notes:
+- `resource discover --type` accepts canonical public type tokens like `aws:s3/bucket:Bucket`; callers do not need provider-native filter syntax.
 
 ## Observability
 
 ```bash
 opsy observability
-opsy observability aws logs groups --workspace <slug> --env <slug> [--profile <profileId>] [--region <region>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
-opsy observability aws logs tail --workspace <slug> --env <slug> --log-group <name> [--profile <profileId>] [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>]
-opsy observability aws logs events --workspace <slug> --env <slug> --log-group <name> [--profile <profileId>] [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
-opsy observability aws logs query --workspace <slug> --env <slug> --log-groups <csv> --query-string <text> [--profile <profileId>] [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--timeout-seconds <n>]
-opsy observability aws metrics list --workspace <slug> --env <slug> [--profile <profileId>] [--region <region>] [--namespace <name>] [--metric-name <name>] [--dimensions <json-array>] [--recently-active <PT3H>] [--next-token <token>]
-opsy observability aws metrics query --workspace <slug> --env <slug> --queries <json-array> [--profile <profileId>] [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--scan-by <TimestampDescending|TimestampAscending>] [--max-datapoints <n>]
-opsy observability aws alarms list --workspace <slug> --env <slug> [--profile <profileId>] [--region <region>] [--state <OK|ALARM|INSUFFICIENT_DATA>] [--type <metric|composite|all>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
-opsy observability aws alarms detail --workspace <slug> --env <slug> --alarm-name <name> [--profile <profileId>] [--region <region>]
-opsy observability aws alarms history --workspace <slug> --env <slug> --alarm-name <name> [--profile <profileId>] [--region <region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
+opsy observability aws logs groups --project <slug> [--region <region>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
+opsy observability aws logs tail --project <slug> --log-group <name> [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>]
+opsy observability aws logs events --project <slug> --log-group <name> [--region <region>] [--log-stream <name>] [--filter-pattern <pattern>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
+opsy observability aws logs query --project <slug> --log-groups <csv> --query-string <text> [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--timeout-seconds <n>]
+opsy observability aws metrics list --project <slug> [--region <region>] [--namespace <name>] [--metric-name <name>] [--dimensions <json-array>] [--recently-active <PT3H>] [--next-token <token>]
+opsy observability aws metrics query --project <slug> --queries <json-array> [--region <region>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--scan-by <TimestampDescending|TimestampAscending>] [--max-datapoints <n>]
+opsy observability aws alarms list --project <slug> [--region <region>] [--state <OK|ALARM|INSUFFICIENT_DATA>] [--type <metric|composite|all>] [--name-prefix <prefix>] [--limit <n>] [--next-token <token>]
+opsy observability aws alarms detail --project <slug> --alarm-name <name> [--region <region>]
+opsy observability aws alarms history --project <slug> --alarm-name <name> [--region <region>] [--history-item-type <ConfigurationUpdate|StateUpdate|Action>] [--since <duration-or-iso>] [--until <duration-or-iso>] [--limit <n>] [--next-token <token>]
 ```
 
 ## Feedback

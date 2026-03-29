@@ -8,8 +8,7 @@ const DEFAULT_CONFIG_FILE = join(DEFAULT_CONFIG_DIR, "config.json");
 type Config = {
   token?: string;
   apiUrl?: string;
-  workspace?: string;
-  env?: string;
+  project?: string;
 };
 
 function getConfigFilePath(): string {
@@ -46,10 +45,6 @@ export function getApiUrl(flags: { apiUrl?: string }): string {
   return flags.apiUrl ?? process.env.OPSY_API_URL ?? loadConfig().apiUrl ?? "https://api.opsy.sh";
 }
 
-export function getWorkspace(flags: { workspace?: string }): string | undefined {
-  return flags.workspace ?? process.env.OPSY_WORKSPACE ?? loadConfig().workspace;
-}
-
-export function getEnv(flags: { env?: string }): string | undefined {
-  return flags.env ?? process.env.OPSY_ENV ?? loadConfig().env;
+export function getProject(flags: { project?: string }): string | undefined {
+  return flags.project ?? process.env.OPSY_PROJECT ?? loadConfig().project;
 }

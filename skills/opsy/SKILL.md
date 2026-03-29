@@ -1,13 +1,13 @@
 ---
 name: opsy
-description: Use when working with Opsy to manage infrastructure — inspecting workspaces/environments/resources, proposing changes, previewing them, and applying executions. Prefer MCP when available, fall back to CLI otherwise.
+description: Use when working with Opsy to manage infrastructure — inspecting projects/resources, proposing changes, previewing them, and applying executions. Prefer MCP when available, fall back to CLI otherwise.
 ---
 
 # Opsy
 
 ## When to use
 
-Use this skill for tasks involving Opsy projects, environments, resources, changes, executions, discovery, observability flows, or schema inspection.
+Use this skill for tasks involving Opsy projects, resources, changes, executions, integrations, discovery, observability flows, or schema inspection.
 
 ## MCP vs CLI
 
@@ -27,4 +27,4 @@ Use this skill for tasks involving Opsy projects, environments, resources, chang
 ## CLI reference
 
 See `references/commands.md` for the full command surface.
-See `references/domain.md` for mutation format, refs, groups, and auto-apply behavior.
+See `references/domain.md` for mutation format, refs, groups, preview-first convenience mutations, and auto-apply behavior.

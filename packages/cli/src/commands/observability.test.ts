@@ -68,12 +68,12 @@ describe("observability CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observability", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod", "--name-prefix", "/aws/lambda/"],
+      ["node", "opsy", "observability", "aws", "logs", "groups", "--project", "acme", "--name-prefix", "/aws/lambda/"],
       { from: "node" },
     );
 
     expect(paths).toEqual([
-      "/workspaces/acme/environments/prod/observe/aws/logs/groups?namePrefix=%2Faws%2Flambda%2F",
+      "/projects/acme/observe/aws/logs/groups?namePrefix=%2Faws%2Flambda%2F",
     ]);
   });
 
@@ -94,12 +94,12 @@ describe("observability CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "observability", "aws", "metrics", "query", "--workspace", "acme", "--env", "prod", "--queries", "[{\"Id\":\"cpu\"}]"],
+      ["node", "opsy", "observability", "aws", "metrics", "query", "--project", "acme", "--queries", "[{\"Id\":\"cpu\"}]"],
       { from: "node" },
     );
 
     expect(calls).toEqual([{
-      path: "/workspaces/acme/environments/prod/observe/aws/metrics/query",
+      path: "/projects/acme/observe/aws/metrics/query",
       body: {
         profileId: undefined,
         region: undefined,
@@ -112,12 +112,10 @@ describe("observability CLI command", () => {
     }]);
   });
 
-  test("observability uses context defaults when workspace and env are omitted", async () => {
+  test("observability uses context defaults when project is omitted", async () => {
     const paths: string[] = [];
-    const previousWorkspace = process.env.OPSY_WORKSPACE;
-    const previousEnv = process.env.OPSY_ENV;
-    process.env.OPSY_WORKSPACE = "acme";
-    process.env.OPSY_ENV = "prod";
+    const previousProject = process.env.OPSY_PROJECT;
+    process.env.OPSY_PROJECT = "acme";
 
     try {
       const program = createProgram(createObservabilityCommand({
@@ -140,13 +138,11 @@ describe("observability CLI command", () => {
       );
 
       expect(paths).toEqual([
-        "/workspaces/acme/environments/prod/observe/aws/logs/groups",
+        "/projects/acme/observe/aws/logs/groups",
       ]);
     } finally {
-      if (previousWorkspace === undefined) delete process.env.OPSY_WORKSPACE;
-      else process.env.OPSY_WORKSPACE = previousWorkspace;
-      if (previousEnv === undefined) delete process.env.OPSY_ENV;
-      else process.env.OPSY_ENV = previousEnv;
+      if (previousProject === undefined) delete process.env.OPSY_PROJECT;
+      else process.env.OPSY_PROJECT = previousProject;
     }
   });
 
@@ -168,7 +164,7 @@ describe("observability CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "--json", "observability", "aws", "logs", "groups", "--workspace", "acme", "--env", "prod"],
+      ["node", "opsy", "--json", "observability", "aws", "logs", "groups", "--project", "acme"],
       { from: "node" },
     );
 
@@ -221,7 +217,7 @@ describe("observability CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "observability", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "observability", "aws", "logs", "query", "--project", "acme", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 
@@ -260,7 +256,7 @@ describe("observability CLI command", () => {
     }));
 
     await expect(program.parseAsync(
-      ["node", "opsy", "--json", "observability", "aws", "logs", "query", "--workspace", "acme", "--env", "prod", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
+      ["node", "opsy", "--json", "observability", "aws", "logs", "query", "--project", "acme", "--log-groups", "/aws/lambda/app", "--query-string", "fields @message"],
       { from: "node" },
     )).rejects.toThrow("exit:1");
 

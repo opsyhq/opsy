@@ -68,11 +68,11 @@ describe("discovery CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "discovery", "aws", "types", "--workspace", "acme", "--env", "prod", "--query", "s3"],
+      ["node", "opsy", "discovery", "aws", "types", "--project", "acme", "--query", "s3"],
       { from: "node" },
     );
 
-    expect(paths).toEqual(["/workspaces/acme/environments/prod/discover/aws/types?query=s3"]);
+    expect(paths).toEqual(["/projects/acme/discover/aws/types?query=s3"]);
   });
 
   test("discovery cloudflare list hits the provider-scoped route", async () => {
@@ -92,19 +92,17 @@ describe("discovery CLI command", () => {
     }));
 
     await program.parseAsync(
-      ["node", "opsy", "discovery", "cloudflare", "list", "--workspace", "acme", "--env", "prod", "--type", "zone"],
+      ["node", "opsy", "discovery", "cloudflare", "list", "--project", "acme", "--type", "zone"],
       { from: "node" },
     );
 
-    expect(paths).toEqual(["/workspaces/acme/environments/prod/discover/cloudflare?type=zone"]);
+    expect(paths).toEqual(["/projects/acme/discover/cloudflare?type=zone"]);
   });
 
-  test("discovery uses context defaults when workspace and env are omitted", async () => {
+  test("discovery uses context defaults when project is omitted", async () => {
     const paths: string[] = [];
-    const previousWorkspace = process.env.OPSY_WORKSPACE;
-    const previousEnv = process.env.OPSY_ENV;
-    process.env.OPSY_WORKSPACE = "acme";
-    process.env.OPSY_ENV = "prod";
+    const previousProject = process.env.OPSY_PROJECT;
+    process.env.OPSY_PROJECT = "acme";
 
     try {
       const program = createProgram(createDiscoveryCommand({
@@ -126,12 +124,10 @@ describe("discovery CLI command", () => {
         { from: "node" },
       );
 
-      expect(paths).toEqual(["/workspaces/acme/environments/prod/discover/cloudflare?type=zone"]);
+      expect(paths).toEqual(["/projects/acme/discover/cloudflare?type=zone"]);
     } finally {
-      if (previousWorkspace === undefined) delete process.env.OPSY_WORKSPACE;
-      else process.env.OPSY_WORKSPACE = previousWorkspace;
-      if (previousEnv === undefined) delete process.env.OPSY_ENV;
-      else process.env.OPSY_ENV = previousEnv;
+      if (previousProject === undefined) delete process.env.OPSY_PROJECT;
+      else process.env.OPSY_PROJECT = previousProject;
     }
   });
 });
