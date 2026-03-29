@@ -1,6 +1,6 @@
 {
   "name": "@opsyhq/opsy",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Opsy CLI for agent-driven infrastructure management.",
   "type": "module",
   "homepage": "https://opsy.sh",
@@ -30,10 +30,10 @@
     "dev": "bun run src/bin.ts"
   },
   "dependencies": {
-    "@opsy/contracts": "workspace:*",
     "commander": "^13.1.0"
   },
   "devDependencies": {
+    "@opsy/contracts": "workspace:*",
     "@types/node": "^20.19.19",
     "bun-types": "^1.3.11",
     "typescript": "^5.9.3"
