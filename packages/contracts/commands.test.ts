@@ -53,14 +53,12 @@ describe("noun-first command contracts", () => {
     expect(renderCommandHelp(["change", "append"])).toContain('"customTimeouts"');
     expect(renderCommandHelp(["change", "apply"])).toContain("Ask a human to open the returned review URL in the Opsy web UI");
     expect(renderCommandHelp(["change", "apply"])).toContain("the apply does not complete through MCP");
-    expect(renderCommandHelp(["discovery", "aws"])).toContain("Subcommands:");
     expect(renderCommandHelp(["observability", "aws"])).toContain("observability aws logs groups");
   });
 
   test("normalizeCommandPath handles noun-first commands", () => {
     expect(normalizeCommandPath(["resource", "get", "vpc"])).toEqual(["resource", "get"]);
     expect(normalizeCommandPath(["feedback", "send", "--message", "hi"])).toEqual(["feedback", "send"]);
-    expect(normalizeCommandPath(["discovery", "aws", "list", "extra"])).toEqual(["discovery", "aws", "list"]);
     expect(normalizeCommandPath(["observability", "aws", "logs", "tail", "extra"])).toEqual(["observability", "aws", "logs", "tail"]);
   });
 

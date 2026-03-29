@@ -11,6 +11,7 @@ export * from "./commands";
 export * from "./display";
 export * from "./streaming";
 export * from "./audit";
+export * from "./legal";
 
 export type DiscoveryProviderId = "aws" | "cloudflare";
 

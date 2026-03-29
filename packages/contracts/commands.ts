@@ -604,66 +604,6 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     ],
   }),
   command({
-    id: "discovery.aws.types",
-    path: ["discovery", "aws", "types"],
-    usage: "opsy discovery aws types --project <project> [--query <text>]",
-    summary: "List AWS discovery types.",
-  }),
-  command({
-    id: "discovery.aws.list",
-    path: ["discovery", "aws", "list"],
-    usage: "opsy discovery aws list --project <project> [--type <type>] [--region <region>]",
-    summary: "Compatibility alias for provider-scoped AWS inventory discovery.",
-    nextSteps: [
-      "Prefer `opsy resource discover --project <slug> --provider aws` on the unified public surface.",
-    ],
-  }),
-  command({
-    id: "discovery.aws.inspect",
-    path: ["discovery", "aws", "inspect"],
-    usage: "opsy discovery aws inspect --project <project> --provider-id <id> --type <type>",
-    summary: "Compatibility alias for provider-scoped AWS reads.",
-    nextSteps: [
-      "Prefer `opsy resource read --project <slug> --type <type> --provider-id <id> --provider aws` on the unified public surface.",
-    ],
-  }),
-  command({
-    id: "discovery.aws.import",
-    path: ["discovery", "aws", "import"],
-    usage: "opsy discovery aws import --project <project> --items <json>",
-    summary: "Import existing AWS resources into a change.",
-  }),
-  command({
-    id: "discovery.cloudflare.types",
-    path: ["discovery", "cloudflare", "types"],
-    usage: "opsy discovery cloudflare types --project <project> [--query <text>]",
-    summary: "List Cloudflare discovery types.",
-  }),
-  command({
-    id: "discovery.cloudflare.list",
-    path: ["discovery", "cloudflare", "list"],
-    usage: "opsy discovery cloudflare list --project <project> [--type <type>] [--location <location>]",
-    summary: "Compatibility alias for provider-scoped Cloudflare inventory discovery.",
-    nextSteps: [
-      "Prefer `opsy resource discover --project <slug> --provider cloudflare` on the unified public surface.",
-    ],
-  }),
-  command({
-    id: "discovery.cloudflare.inspect",
-    path: ["discovery", "cloudflare", "inspect"],
-    usage: "opsy discovery cloudflare inspect --project <project> --provider-id <id> --type <type>",
-    summary: "Compatibility alias for provider-scoped Cloudflare reads.",
-    nextSteps: [
-      "Prefer `opsy resource read --project <slug> --type <type> --provider-id <id> --provider cloudflare` on the unified public surface.",
-    ],
-  }),
-  command({
-    id: "discovery.cloudflare.import",
-    path: ["discovery", "cloudflare", "import"],
-    usage: "opsy discovery cloudflare import --project <project> --items <json>",
-    summary: "Import existing Cloudflare resources into a change.",
-  }),
-  command({
     id: "observability.aws.logs.groups",
     path: ["observability", "aws", "logs", "groups"],
     usage: "opsy observability aws logs groups --project <project> [...]",
@@ -796,7 +736,7 @@ const TOP_LEVEL_HELP = [
   "  change         Proposed and applied changes",
   "  integration    Integrations",
   "  schema         Resource schema browsing",
-  "  discovery      Provider-scoped discovery compatibility alias",
+
   "  observability  Provider-scoped logs, metrics, and alarms",
   "  feedback       Submit feedback to the Opsy team",
 ].join("\n");
@@ -910,15 +850,6 @@ export function renderCommandHelp(path: string[]): string {
     }
   }
 
-  if (path[0] === "discovery") {
-    if (path.length === 1) {
-      return `Supported discovery providers:\n${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join("\n")}\nUse "opsy discovery <provider> --help" for provider-specific discovery commands.`;
-    }
-    if (!OPSY_DISCOVERY_PROVIDERS.some((provider) => provider.id === path[1])) {
-      return getUnsupportedDiscoveryProviderMessage(path[1] ?? "");
-    }
-  }
-
   const exact = findCommandSpec(path);
   if (exact) {
     return [
@@ -943,7 +874,7 @@ export function renderCommandHelp(path: string[]): string {
 export function renderServerInstructions(): string {
   return [
     "Opsy manages infrastructure through projects, resources, and changes.",
-    "Tools: opsy_project, opsy_resource, opsy_change, opsy_integration, opsy_schema, opsy_discovery, opsy_observability, opsy_admin.",
+    "Tools: opsy_project, opsy_resource, opsy_change, opsy_integration, opsy_schema, opsy_observability, opsy_admin.",
     "Zero-start flow: opsy_project list -> opsy_resource list -> opsy_resource get, then opsy_change create or opsy_resource create.",
     "opsy_resource create/update/delete preview first unless autoApply=true; import and forget keep their immediate-apply path.",
     'Resource and change `inputs` follow Pulumi property names for each type (example: `aws:s3/bucket:Bucket` with `{"bucket":"my-bucket"}`). Reach for opsy_schema list/get only when the exact type token, field names, or field types are unclear.',
@@ -1021,9 +952,6 @@ export function normalizeCommandPath(positionals: string[]): string[] {
   }
 
   const [first] = positionals;
-  if (first === "discovery") {
-    return positionals.slice(0, Math.min(positionals.length, 3));
-  }
   if (first === "observability") {
     return positionals.slice(0, Math.min(positionals.length, 4));
   }

@@ -75,20 +75,6 @@ opsy schema list --provider <pkg> [--query <text>]
 opsy schema get <token>
 ```
 
-## Discovery
-
-```bash
-opsy discovery
-opsy discovery aws types --project <slug> [--query <text>]
-opsy discovery aws list --project <slug> [--type <type>] [--region <region>]
-opsy discovery aws inspect --project <slug> --provider-id <id> --type <type>  # compatibility alias; prefer `opsy resource read`
-opsy discovery aws import --project <slug> --items <json>
-opsy discovery cloudflare list --project <slug> [--type <type>]
-```
-
-Notes:
-- `resource discover --type` accepts canonical public type tokens like `aws:s3/bucket:Bucket`; callers do not need provider-native filter syntax.
-
 ## Observability
 
 ```bash

@@ -10,7 +10,7 @@ import { executionCmd } from "./commands/execution";
 import { integrationCmd } from "./commands/integration";
 import { schemaCmd } from "./commands/schema";
 import { feedbackCmd } from "./commands/feedback";
-import { discoveryCmd } from "./commands/discovery";
+
 import { observabilityCmd } from "./commands/observability";
 import { contextCmd } from "./commands/context";
 
@@ -60,7 +60,7 @@ program.addCommand(changeCmd);
 program.addCommand(executionCmd);
 program.addCommand(integrationCmd);
 program.addCommand(schemaCmd);
-program.addCommand(discoveryCmd);
+
 program.addCommand(observabilityCmd);
 program.addCommand(feedbackCmd);
 program.addCommand(contextCmd);

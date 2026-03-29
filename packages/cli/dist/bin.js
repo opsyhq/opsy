@@ -2285,9 +2285,6 @@ function flags(...entries) {
 function command(spec) {
   return spec;
 }
-function getUnsupportedDiscoveryProviderMessage(provider) {
-  return `Discovery is not implemented for "${provider}". Use manual import.`;
-}
 function renderFlags(spec) {
   if (!spec.flags?.length) {
     return "";
@@ -2398,17 +2395,6 @@ ${observeHelp.purpose}${notes}${examples}`;
       }
     }
   }
-  if (path[0] === "discovery") {
-    if (path.length === 1) {
-      return `Supported discovery providers:
-${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
-`)}
-Use "opsy discovery <provider> --help" for provider-specific discovery commands.`;
-    }
-    if (!OPSY_DISCOVERY_PROVIDERS.some((provider) => provider.id === path[1])) {
-      return getUnsupportedDiscoveryProviderMessage(path[1] ?? "");
-    }
-  }
   const exact = findCommandSpec(path);
   if (exact) {
     return [
@@ -2486,9 +2472,6 @@ function normalizeCommandPath(positionals) {
     return [];
   }
   const [first] = positionals;
-  if (first === "discovery") {
-    return positionals.slice(0, Math.min(positionals.length, 3));
-  }
   if (first === "observability") {
     return positionals.slice(0, Math.min(positionals.length, 4));
   }
@@ -2503,13 +2486,9 @@ function getObserveSupportedProvidersMessage() {
 function getObserveProviderHelpMessage(provider) {
   return renderObserveProviderHelp(provider);
 }
-var OPSY_DISCOVERY_PROVIDERS, OPSY_COMMAND_SPECS, TOP_LEVEL_HELP;
+var OPSY_COMMAND_SPECS, TOP_LEVEL_HELP;
 var init_commands = __esm(() => {
   init_observe();
-  OPSY_DISCOVERY_PROVIDERS = [
-    { id: "aws", label: "AWS" },
-    { id: "cloudflare", label: "Cloudflare" }
-  ];
   OPSY_COMMAND_SPECS = [
     command({
       id: "project.list",
@@ -2997,66 +2976,6 @@ var init_commands = __esm(() => {
       ]
     }),
     command({
-      id: "discovery.aws.types",
-      path: ["discovery", "aws", "types"],
-      usage: "opsy discovery aws types --project <project> [--query <text>]",
-      summary: "List AWS discovery types."
-    }),
-    command({
-      id: "discovery.aws.list",
-      path: ["discovery", "aws", "list"],
-      usage: "opsy discovery aws list --project <project> [--type <type>] [--region <region>]",
-      summary: "Compatibility alias for provider-scoped AWS inventory discovery.",
-      nextSteps: [
-        "Prefer `opsy resource discover --project <slug> --provider aws` on the unified public surface."
-      ]
-    }),
-    command({
-      id: "discovery.aws.inspect",
-      path: ["discovery", "aws", "inspect"],
-      usage: "opsy discovery aws inspect --project <project> --provider-id <id> --type <type>",
-      summary: "Compatibility alias for provider-scoped AWS reads.",
-      nextSteps: [
-        "Prefer `opsy resource read --project <slug> --type <type> --provider-id <id> --provider aws` on the unified public surface."
-      ]
-    }),
-    command({
-      id: "discovery.aws.import",
-      path: ["discovery", "aws", "import"],
-      usage: "opsy discovery aws import --project <project> --items <json>",
-      summary: "Import existing AWS resources into a change."
-    }),
-    command({
-      id: "discovery.cloudflare.types",
-      path: ["discovery", "cloudflare", "types"],
-      usage: "opsy discovery cloudflare types --project <project> [--query <text>]",
-      summary: "List Cloudflare discovery types."
-    }),
-    command({
-      id: "discovery.cloudflare.list",
-      path: ["discovery", "cloudflare", "list"],
-      usage: "opsy discovery cloudflare list --project <project> [--type <type>] [--location <location>]",
-      summary: "Compatibility alias for provider-scoped Cloudflare inventory discovery.",
-      nextSteps: [
-        "Prefer `opsy resource discover --project <slug> --provider cloudflare` on the unified public surface."
-      ]
-    }),
-    command({
-      id: "discovery.cloudflare.inspect",
-      path: ["discovery", "cloudflare", "inspect"],
-      usage: "opsy discovery cloudflare inspect --project <project> --provider-id <id> --type <type>",
-      summary: "Compatibility alias for provider-scoped Cloudflare reads.",
-      nextSteps: [
-        "Prefer `opsy resource read --project <slug> --type <type> --provider-id <id> --provider cloudflare` on the unified public surface."
-      ]
-    }),
-    command({
-      id: "discovery.cloudflare.import",
-      path: ["discovery", "cloudflare", "import"],
-      usage: "opsy discovery cloudflare import --project <project> --items <json>",
-      summary: "Import existing Cloudflare resources into a change."
-    }),
-    command({
       id: "observability.aws.logs.groups",
       path: ["observability", "aws", "logs", "groups"],
       usage: "opsy observability aws logs groups --project <project> [...]",
@@ -3185,7 +3104,6 @@ var init_commands = __esm(() => {
     "  change         Proposed and applied changes",
     "  integration    Integrations",
     "  schema         Resource schema browsing",
-    "  discovery      Provider-scoped discovery compatibility alias",
     "  observability  Provider-scoped logs, metrics, and alarms",
     "  feedback       Submit feedback to the Opsy team"
   ].join(`
@@ -3423,15 +3341,16 @@ var init_audit = __esm(() => {
   ORG_AUDIT_ENTITY_TYPES = [...new Set(ORG_AUDIT_EVENTS.map((e) => e.entityType))];
 });
 
+// ../contracts/legal.ts
+var init_legal = () => {};
+
 // ../contracts/index.ts
-function getUnsupportedDiscoveryProviderMessage2(provider) {
-  return `Discovery is not implemented for "${provider}". Use manual import.`;
-}
 var init_contracts = __esm(() => {
   init_observe();
   init_commands();
   init_display();
   init_audit();
+  init_legal();
 });
 
 // src/client.ts
@@ -4693,9 +4612,9 @@ var feedbackCmd = createFeedbackCommand();
 // src/catalog.ts
 init_contracts();
 
-// src/commands/discovery.ts
-init_config();
+// src/commands/observability.ts
 init_client();
+init_config();
 var defaultDeps = {
   apiRequest,
   getToken,
@@ -4704,27 +4623,6 @@ var defaultDeps = {
   error: (message) => console.error(message),
   exit: (code) => process.exit(code)
 };
-var discoveryProviderConfigs = [
-  {
-    id: "aws",
-    label: "AWS",
-    typeHelp: "Filter by AWS discovery type or Pulumi token",
-    inspectFlag: "provider-id",
-    inspectFlagDescription: "AWS provider ID"
-  },
-  {
-    id: "cloudflare",
-    label: "Cloudflare",
-    typeHelp: "Filter by Cloudflare discovery type or Pulumi token",
-    inspectFlag: "provider-id",
-    inspectFlagDescription: "Cloudflare provider ID"
-  }
-];
-function formatSupportedDiscoveryProviders() {
-  return `Supported discovery providers:
-${OPSY_DISCOVERY_PROVIDERS.map((provider) => `  ${provider.id}`).join(`
-`)}`;
-}
 function getRootFlags2(command2) {
   let current = command2;
   while (current.parent)
@@ -4740,164 +4638,10 @@ function buildQuery2(params) {
   const query = search.toString();
   return query ? `?${query}` : "";
 }
-function handleCliError2(error, deps) {
-  deps.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-  return deps.exit(1);
-}
-function requireProjectValue2(command2, value) {
-  const resolved = getProject({ project: value ?? getRootFlags2(command2).project });
-  if (!resolved) {
-    throw new Error("Missing --project.");
-  }
-  return resolved;
-}
-function formatScope(scope) {
-  if (!scope)
-    return "global";
-  const parts = Object.entries(scope).filter(([, value]) => typeof value === "string" && value.length > 0).map(([key, value]) => `${key}:${value}`);
-  return parts.length > 0 ? parts.join(", ") : "global";
-}
-function getInspectOptionValue(opts, flagName) {
-  const camelKey = flagName.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-  return opts[camelKey] ?? opts.providerId;
-}
-function addProviderDiscoveryCommands(discoveryCmd, deps, config) {
-  const providerCmd = new Command(config.id).description(`Discover existing ${config.label} resources`);
-  providerCmd.action(function() {
-    deps.log(this.helpInformation());
-  });
-  providerCmd.command("types").description(`List ${config.label} resource types that support discovery`).option("--project <slug>", "Project slug").option("--query <text>", "Filter by resource type").action(async function(opts) {
-    const flags2 = getRootFlags2(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
-    try {
-      const project = requireProjectValue2(this, opts.project);
-      const path = `/projects/${project}/discover/${config.id}/types${buildQuery2({ query: opts.query })}`;
-      const types = await deps.apiRequest(path, { token, apiUrl });
-      if (flags2.json)
-        return output(types, flags2);
-      if (!types.length) {
-        deps.log(`No ${config.label} discovery types found.`);
-        return;
-      }
-      deps.log(formatTable(["TYPE", "PULUMI TYPE"], types.map((type) => [type.providerType, type.pulumiType ?? "-"])));
-    } catch (error) {
-      handleCliError2(error, deps);
-    }
-  });
-  providerCmd.command("list").description(`List existing ${config.label} resources`).option("--project <slug>", "Project slug").option("--type <type>", config.typeHelp).option("--location <location>", "Filter by discovery location").option("--region <region>", "AWS-only alias for --location").option("--profile <profileId>", `Use a specific ${config.label} integration`).action(async function(opts) {
-    const flags2 = getRootFlags2(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
-    try {
-      const project = requireProjectValue2(this, opts.project);
-      const location = opts.location ?? opts.region;
-      const path = `/projects/${project}/discover/${config.id}${buildQuery2({
-        type: opts.type,
-        location,
-        profileId: opts.profile
-      })}`;
-      const resources = await deps.apiRequest(path, { token, apiUrl });
-      if (flags2.json)
-        return output(resources, flags2);
-      if (!resources.length) {
-        deps.log(`No ${config.label} resources found.`);
-        return;
-      }
-      deps.log(formatTable(["NAME", "PROVIDER ID", "TYPE", "LOCATION", "SCOPE"], resources.map((resource) => [
-        resource.displayName,
-        resource.providerId,
-        resource.providerType,
-        resource.location ?? "global",
-        formatScope(resource.scope)
-      ])));
-    } catch (error) {
-      handleCliError2(error, deps);
-    }
-  });
-  providerCmd.command("inspect").description(`Inspect a single ${config.label} resource`).option("--project <slug>", "Project slug").requiredOption(`--${config.inspectFlag} <id>`, config.inspectFlagDescription).requiredOption("--type <type>", "Pulumi token or discovery type").option("--profile <profileId>", `Use a specific ${config.label} integration`).action(async function(opts) {
-    const flags2 = getRootFlags2(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
-    try {
-      const project = requireProjectValue2(this, opts.project);
-      const providerId = getInspectOptionValue(opts, config.inspectFlag);
-      const path = `/projects/${project}/discover/${config.id}/inspect${buildQuery2({
-        providerId,
-        type: opts.type,
-        profileId: opts.profile
-      })}`;
-      const detail = await deps.apiRequest(path, { token, apiUrl });
-      output(detail, flags2);
-    } catch (error) {
-      handleCliError2(error, deps);
-    }
-  });
-  providerCmd.command("import").description(`Import discovered ${config.label} resources`).option("--project <slug>", "Project slug").requiredOption("--items <json>", "JSON array of {providerId, type, slug}").action(async function(opts) {
-    const flags2 = getRootFlags2(this);
-    const token = deps.getToken(flags2);
-    const apiUrl = deps.getApiUrl(flags2);
-    try {
-      const project = requireProjectValue2(this, opts.project);
-      const items = JSON.parse(opts.items);
-      const result = await deps.apiRequest(`/projects/${project}/discover/${config.id}/import`, { method: "POST", body: { items }, token, apiUrl });
-      if (flags2.json)
-        return output(result, flags2);
-      deps.log(`Change ${result.change.shortId} created with ${result.operations.length} ${config.label} import operation(s).`);
-    } catch (error) {
-      handleCliError2(error, deps);
-    }
-  });
-  discoveryCmd.addCommand(providerCmd);
-}
-function createDiscoveryCommand(deps = defaultDeps) {
-  const discoveryCmd = new Command("discovery").description("Provider-scoped resource discovery").argument("[provider]").argument("[args...]");
-  discoveryCmd.action((provider) => {
-    if (!provider) {
-      deps.log(formatSupportedDiscoveryProviders());
-      deps.log('Use "opsy discovery <provider> --help" for provider-specific discovery commands.');
-      return;
-    }
-    deps.error(`Error: ${getUnsupportedDiscoveryProviderMessage2(provider)}`);
-    deps.exit(1);
-  });
-  for (const config of discoveryProviderConfigs) {
-    addProviderDiscoveryCommands(discoveryCmd, deps, config);
-  }
-  return discoveryCmd;
-}
-var discoveryCmd = createDiscoveryCommand();
-
-// src/commands/observability.ts
-init_client();
-init_config();
-var defaultDeps2 = {
-  apiRequest,
-  getToken,
-  getApiUrl,
-  log: (message) => console.log(message),
-  error: (message) => console.error(message),
-  exit: (code) => process.exit(code)
-};
-function getRootFlags3(command2) {
-  let current = command2;
-  while (current.parent)
-    current = current.parent;
-  return current.opts();
-}
-function buildQuery3(params) {
-  const search = new URLSearchParams;
-  for (const [key, value] of Object.entries(params)) {
-    if (value)
-      search.set(key, value);
-  }
-  const query = search.toString();
-  return query ? `?${query}` : "";
-}
 function isQueryTimeoutDetails(value) {
   return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "query_timeout");
 }
-function handleCliError3(error, deps, flags2) {
+function handleCliError2(error, deps, flags2) {
   if (flags2?.json && error instanceof ApiRequestError) {
     output(error.body, flags2);
     return deps.exit(1);
@@ -4913,8 +4657,8 @@ function handleCliError3(error, deps, flags2) {
   }
   return deps.exit(1);
 }
-function requireProjectValue3(command2, value) {
-  const resolved = getProject({ project: value ?? getRootFlags3(command2).project });
+function requireProjectValue2(command2, value) {
+  const resolved = getProject({ project: value ?? getRootFlags2(command2).project });
   if (!resolved) {
     throw new Error("Missing --project.");
   }
@@ -4956,7 +4700,7 @@ function printLogEvents(deps, events) {
   deps.log(events.map((event) => `[${event.timestamp}] ${event.logStreamName ?? "-"} ${event.message}`).join(`
 `));
 }
-function createObservabilityCommand(deps = defaultDeps2) {
+function createObservabilityCommand(deps = defaultDeps) {
   const observabilityCmd = new Command("observability").description("Provider-scoped logs, metrics, and alarms").argument("[provider]").argument("[args...]");
   observabilityCmd.action((provider) => {
     if (!provider) {
@@ -4978,12 +4722,12 @@ ${getObserveProviderHelpMessage("aws")}`);
     deps.log(this.helpInformation());
   });
   const groupsCmd = new Command("groups").option("--project <slug>", "Project slug").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--name-prefix <prefix>", "Filter by log group name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/logs/groups${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/logs/groups${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         namePrefix: opts.namePrefix,
@@ -5004,18 +4748,18 @@ ${getObserveProviderHelpMessage("aws")}`);
         group.logGroupClass ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(groupsCmd, ["logs", "groups"]);
   logsCmd.addCommand(groupsCmd);
   const tailCmd = new Command("tail").option("--project <slug>", "Project slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/logs/tail${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/logs/tail${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         logGroup: opts.logGroup,
@@ -5030,18 +4774,18 @@ ${getObserveProviderHelpMessage("aws")}`);
         return output(data, flags2);
       printLogEvents(deps, data.events);
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(tailCmd, ["logs", "tail"]);
   logsCmd.addCommand(tailCmd);
   const eventsCmd = new Command("events").option("--project <slug>", "Project slug").requiredOption("--log-group <name>", "Log group name").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--log-stream <name>", "Filter to one log stream").option("--filter-pattern <pattern>", "CloudWatch Logs filter pattern").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum events").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/logs/events${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/logs/events${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         logGroup: opts.logGroup,
@@ -5057,17 +4801,17 @@ ${getObserveProviderHelpMessage("aws")}`);
         return output(data, flags2);
       printLogEvents(deps, data.events);
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(eventsCmd, ["logs", "events"]);
   logsCmd.addCommand(eventsCmd);
   const queryCmd = new Command("query").option("--project <slug>", "Project slug").requiredOption("--log-groups <csv>", "Comma-separated log groups").requiredOption("--query-string <text>", "Logs Insights query").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Maximum rows").option("--timeout-seconds <n>", "Polling timeout").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
+      const project = requireProjectValue2(this, opts.project);
       const data = await deps.apiRequest(`/projects/${project}/observe/aws/logs/query`, {
         method: "POST",
         body: {
@@ -5092,7 +4836,7 @@ ${getObserveProviderHelpMessage("aws")}`);
       const columns = Array.from(new Set(data.rows.flatMap((row) => Object.keys(row))));
       deps.log(formatTable(columns, data.rows.map((row) => columns.map((column) => String(row[column] ?? "")))));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(queryCmd, ["logs", "query"]);
@@ -5103,14 +4847,14 @@ ${getObserveProviderHelpMessage("aws")}`);
     deps.log(this.helpInformation());
   });
   const metricsListCmd = new Command("list").option("--project <slug>", "Project slug").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--namespace <name>", "Metric namespace").option("--metric-name <name>", "Metric name").option("--dimensions <json-array>", "JSON array of AWS dimension filters").option("--recently-active <PT3H>", "Recently active window").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
+      const project = requireProjectValue2(this, opts.project);
       if (opts.dimensions)
         parseJsonArray(opts.dimensions, "--dimensions");
-      const data = await deps.apiRequest(`/projects/${project}/observe/aws/metrics${buildQuery3({
+      const data = await deps.apiRequest(`/projects/${project}/observe/aws/metrics${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         namespace: opts.namespace,
@@ -5131,17 +4875,17 @@ ${getObserveProviderHelpMessage("aws")}`);
         metric.dimensions.map((dimension) => `${dimension.name}=${dimension.value ?? "*"}`).join(", ")
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(metricsListCmd, ["metrics", "list"]);
   metricsCmd.addCommand(metricsListCmd);
   const metricsQueryCmd = new Command("query").option("--project <slug>", "Project slug").requiredOption("--queries <json-array>", "JSON array of MetricDataQueries").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--scan-by <mode>", "TimestampDescending or TimestampAscending").option("--max-datapoints <n>", "Maximum datapoints").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
+      const project = requireProjectValue2(this, opts.project);
       const queries = parseJsonArray(opts.queries, "--queries");
       const data = await deps.apiRequest(`/projects/${project}/observe/aws/metrics/query`, {
         method: "POST",
@@ -5166,7 +4910,7 @@ ${getObserveProviderHelpMessage("aws")}`);
         String(series.values.length)
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(metricsQueryCmd, ["metrics", "query"]);
@@ -5177,12 +4921,12 @@ ${getObserveProviderHelpMessage("aws")}`);
     deps.log(this.helpInformation());
   });
   const alarmsListCmd = new Command("list").option("--project <slug>", "Project slug").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--state <state>", "OK, ALARM, or INSUFFICIENT_DATA").option("--type <type>", "metric, composite, or all", "all").option("--name-prefix <prefix>", "Alarm name prefix").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/alarms${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/alarms${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         state: opts.state,
@@ -5205,18 +4949,18 @@ ${getObserveProviderHelpMessage("aws")}`);
         alarm.stateUpdatedAt ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsListCmd, ["alarms", "list"]);
   alarmsCmd.addCommand(alarmsListCmd);
   const alarmsDetailCmd = new Command("detail").option("--project <slug>", "Project slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/alarms/detail${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/alarms/detail${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         alarmName: opts.alarmName
@@ -5224,18 +4968,18 @@ ${getObserveProviderHelpMessage("aws")}`);
       const data = await deps.apiRequest(path, { token, apiUrl });
       output(data, flags2);
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsDetailCmd, ["alarms", "detail"]);
   alarmsCmd.addCommand(alarmsDetailCmd);
   const alarmsHistoryCmd = new Command("history").option("--project <slug>", "Project slug").requiredOption("--alarm-name <name>", "Alarm name").option("--profile <profileId>", "Use a specific AWS integration").option("--region <aws-region>", "Override the AWS region").option("--history-item-type <type>", "ConfigurationUpdate, StateUpdate, or Action").option("--since <duration-or-iso>", "Range start").option("--until <duration-or-iso>", "Range end").option("--limit <n>", "Page size").option("--next-token <token>", "Pagination token").action(async function(opts) {
-    const flags2 = getRootFlags3(this);
+    const flags2 = getRootFlags2(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      const project = requireProjectValue3(this, opts.project);
-      const path = `/projects/${project}/observe/aws/alarms/history${buildQuery3({
+      const project = requireProjectValue2(this, opts.project);
+      const path = `/projects/${project}/observe/aws/alarms/history${buildQuery2({
         profileId: opts.profile,
         region: opts.region,
         alarmName: opts.alarmName,
@@ -5258,7 +5002,7 @@ ${getObserveProviderHelpMessage("aws")}`);
         item.summary ?? "-"
       ])));
     } catch (error) {
-      handleCliError3(error, deps, flags2);
+      handleCliError2(error, deps, flags2);
     }
   });
   applyCatalogHelp(alarmsHistoryCmd, ["alarms", "history"]);
@@ -5352,7 +5096,6 @@ program2.addCommand(changeCmd);
 program2.addCommand(executionCmd);
 program2.addCommand(integrationCmd);
 program2.addCommand(schemaCmd);
-program2.addCommand(discoveryCmd);
 program2.addCommand(observabilityCmd);
 program2.addCommand(feedbackCmd);
 program2.addCommand(contextCmd);
