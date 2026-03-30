@@ -21,19 +21,19 @@ describe("streaming", () => {
     });
 
     await parser.push(": heartbeat\r\n");
-    await parser.push("id: exec-1:1\r\nevent: step.started\r\ndata: {\"line\":1}\r\n\r\n");
-    await parser.push("id: exec-1:2\nevent: step.completed\ndata: {\"line\":1,\ndata: \"continued\":true}\n\n");
+    await parser.push("id: exec-1:1\r\nevent: operation.started\r\ndata: {\"line\":1}\r\n\r\n");
+    await parser.push("id: exec-1:2\nevent: operation.completed\ndata: {\"line\":1,\ndata: \"continued\":true}\n\n");
     await parser.finish();
 
     expect(seen).toEqual([
       {
         id: "exec-1:1",
-        event: "step.started",
+        event: "operation.started",
         data: "{\"line\":1}",
       },
       {
         id: "exec-1:2",
-        event: "step.completed",
+        event: "operation.completed",
         data: "{\"line\":1,\n\"continued\":true}",
       },
     ]);
@@ -70,14 +70,14 @@ describe("streaming", () => {
 
       if (callCount === 1) {
         return new Response(streamFromChunks([
-          "id: exec-1:1\nevent: step.started\ndata: one\n\n",
+          "id: exec-1:1\nevent: operation.started\ndata: one\n\n",
         ]), {
           headers: { "content-type": "text/event-stream" },
         });
       }
 
       return new Response(streamFromChunks([
-        "id: exec-1:1\nevent: step.started\ndata: one\n\n",
+        "id: exec-1:1\nevent: operation.started\ndata: one\n\n",
         "id: exec-1:2\nevent: execution.completed\ndata: two\n\n",
       ]), {
         headers: { "content-type": "text/event-stream" },

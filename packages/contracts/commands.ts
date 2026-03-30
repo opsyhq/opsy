@@ -523,7 +523,7 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     id: "change.discard",
     path: ["change", "discard"],
     usage: "opsy change discard <shortId>",
-    summary: "Discard a change.",
+    summary: "Discard a change. `dismiss` is an alias.",
   }),
   command({
     id: "change.retry",
@@ -584,20 +584,29 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
       "Use this only when you need help finding the exact type token before creating or updating a resource.",
     ],
     nextSteps: [
-      "Run `opsy schema get <type-token>` only if field names or types are still unclear.",
+      "Run `opsy schema get <type-token>` only if field names, nested shape, or required references are still unclear.",
     ],
   }),
   command({
     id: "schema.get",
     path: ["schema", "get"],
-    usage: "opsy schema get <type-token>",
-    summary: "Show compact field types for one resource schema.",
+    usage: "opsy schema get <type-token> [--detailed]",
+    summary: "Show compact field types for one resource schema. Use --detailed only when compact output is insufficient.",
+    flags: flags(
+      { name: "detailed", description: "Return nested Pulumi/provider schema shape for this type instead of the compact flattened map." },
+    ),
     examples: [
       "opsy schema get cloudflare:index/zone:Zone",
       "opsy schema get aws:ec2/vpc:Vpc",
+      "opsy schema get aws:cloudfront/distribution:Distribution --detailed",
     ],
     whenToUse: [
-      "Use this after `schema list` only when field names, field types, or required references are uncertain.",
+      "Use this after `schema list` only when field names, field types, nested shape, or required references are uncertain.",
+      "Prefer known Pulumi syntax first when the shape is already obvious.",
+    ],
+    notes: [
+      "Schema responses come from Pulumi/provider metadata, not curated Opsy examples.",
+      "Compact mode is the default because full nested schemas can be large. Use `--detailed` only when the compact map is insufficient.",
     ],
     nextSteps: [
       "Return to `opsy resource create ... --type <type-token>` or `opsy change create ... --mutations <json>` with the schema details in hand.",
@@ -877,7 +886,8 @@ export function renderServerInstructions(): string {
     "Tools: opsy_project, opsy_resource, opsy_change, opsy_integration, opsy_schema, opsy_observability, opsy_admin.",
     "Zero-start flow: opsy_project list -> opsy_resource list -> opsy_resource get, then opsy_change create or opsy_resource create.",
     "opsy_resource create/update/delete preview first unless autoApply=true; import and forget keep their immediate-apply path.",
-    'Resource and change `inputs` follow Pulumi property names for each type (example: `aws:s3/bucket:Bucket` with `{"bucket":"my-bucket"}`). Reach for opsy_schema list/get only when the exact type token, field names, or field types are unclear.',
+    'Resource and change `inputs` follow Pulumi property names for each type (example: `aws:s3/bucket:Bucket` with `{"bucket":"my-bucket"}`). Reach for opsy_schema list/get only when the exact type token, field names, field types, or nested shape are unclear.',
+    "Use memory and known Pulumi syntax first when the shape is already obvious. opsy_schema get is compact by default; request detailed schema only when compact output is insufficient. Schema responses come from Pulumi/provider metadata, not curated Opsy examples.",
     'Use `parent` on resource mutations to organize resources, and `dependsOn` for explicit dependency ordering. In change mutation JSON, every mutation object must include `"kind"` and must be one of `"create"`, `"update"`, `"delete"`, `"import"`, or `"forget"`. Use `"parent":"<slug>"` for hierarchy, `"dependsOn":["<slug>"]` for explicit dependency ordering when no input ref expresses the dependency, and `"targetDependents":true` only on `"forget"` to cascade state-only removal from the requested root to graph dependents. `"customTimeouts":{"create":"30m","update":"20m","delete":"10m"}` is supported on `create`, `update`, and `import`. `delete` mutations can override only `"delete"`. `forget` does not support `customTimeouts`. Create `type:"group"` first when you need a virtual container.',
     "MCP authentication is handled by the client session, not by opsy_admin login.",
     "Pass help: true to any tool to see command-specific usage.",

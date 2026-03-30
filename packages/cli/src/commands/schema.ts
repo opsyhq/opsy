@@ -36,12 +36,15 @@ export function createSchemaCommand(deps: CliDeps = defaultCliDeps) {
     schemaCmd.command("get")
       .description("Get one resource schema")
       .argument("<token>")
-      .action(async function (this: Command, tokenArg: string) {
+      .option("--detailed", "Return nested Pulumi/provider schema shape when compact output is insufficient")
+      .action(async function (this: Command, tokenArg: string, opts: { detailed?: boolean }) {
         const flags = getRootFlags(this);
         const token = deps.getToken(flags);
         const apiUrl = deps.getApiUrl(flags);
         try {
-          output(await deps.apiRequest<any>(`/schemas/describe?type=${encodeURIComponent(tokenArg)}`, { token, apiUrl }), flags);
+          const query = new URLSearchParams({ type: tokenArg });
+          if (opts.detailed) query.set("detailed", "true");
+          output(await deps.apiRequest<any>(`/schemas/describe?${query.toString()}`, { token, apiUrl }), flags);
         } catch (error) {
           handleCliError(error, deps);
         }

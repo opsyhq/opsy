@@ -66,6 +66,18 @@ opsy project list --help
 opsy change create --help
 ```
 
+## Schema Guidance
+
+Resource inputs use Pulumi property names. Reach for schema inspection only when the exact type token, field names, nested shape, or required references are unclear.
+
+```bash
+opsy schema list --provider aws --query cloudfront
+opsy schema get aws:cloudfront/distribution:Distribution
+opsy schema get aws:cloudfront/distribution:Distribution --detailed
+```
+
+`schema get` is compact by default to keep payloads small. Use `--detailed` only when the compact map is insufficient. Schema responses come from Pulumi/provider metadata, not curated Opsy examples.
+
 ## Authentication
 
 The CLI accepts a personal access token through:

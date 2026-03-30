@@ -113,7 +113,6 @@ export type ChangeMutation = {
   dependsOn?: string[];
   recursive?: boolean;
   targetDependents?: boolean;
-  force?: boolean;
   version?: number;
   customTimeouts?: CustomTimeouts;
 };
@@ -208,11 +207,11 @@ export type ChangePresentationPayload = {
   customTimeouts?: CustomTimeouts | null;
   providerId?: string | null;
   forget?: boolean;
-  force?: boolean;
 };
 
 export type ChangeOperationRecord = {
   id: string;
+  operationId?: string | null;
   opKey?: string | null;
   changeId: string | null;
   executionId?: string | null;
@@ -252,23 +251,34 @@ export type ChangeOperationRecord = {
   executedByActor?: ActorRecord | null;
   sensitiveInputPaths?: string[];
   customTimeouts?: CustomTimeouts | null;
+  dependsOn?: string[];
+  depStepKeys?: string[];
+  providerDiff?: unknown;
+  checkFailures?: Array<{ property: string; reason: string }>;
+  requiresReplacement?: boolean;
+  unresolvedRefs?: string[];
+  previewComplete?: boolean;
+  executionMode?: "preview" | "apply" | "refresh" | "import" | "control";
   refs: string[];
   mutation?: ChangeMutation | null;
 };
 
 export type ChangePreviewOperation = {
-  operationId: string;
-  opKey?: string;
+  id?: string;
+  operationId?: string | null;
+  opKey?: string | null;
   stepKey?: string;
   resourceSlug: string;
   managed?: boolean;
   managedSlug?: string | null;
   kind: string;
+  status?: string;
   changes: StableChangeRow[];
   diff: ChangePresentationPayload | null;
   intentInputs?: Record<string, unknown> | null;
   resolvedInputs?: Record<string, unknown> | null;
   refs: string[];
+  dependsOn?: string[];
   depStepKeys?: string[];
   providerDiff?: unknown;
   checkFailures?: Array<{ property: string; reason: string }>;
@@ -373,14 +383,11 @@ export type ChangeDetailResponse = {
   executions: ExecutionRecord[];
   latestExecution: ExecutionRecord | null;
   latestApplyExecution?: ExecutionRecord | null;
+  impacts?: DownstreamImpactRecord[];
+  targetSummary?: unknown;
 };
 
-export type ChangePreviewResponse = {
-  change: ChangeRecord;
-  execution: ExecutionRecord;
-  operations: ChangePreviewOperation[];
-  impacts: DownstreamImpactRecord[];
-};
+export type ChangePreviewResponse = ChangeDetailResponse;
 
 export type ResourceConflictDiffEntry = {
   stored: unknown;
@@ -602,8 +609,8 @@ export type RealtimeEvent = {
 
 export const EXECUTION_STREAM_EVENT_TYPES = [
   "execution.started",
-  "step.started",
-  "step.completed",
+  "operation.started",
+  "operation.completed",
   "execution.completed",
   "execution.cancelled",
   "execution.failed",
@@ -619,20 +626,20 @@ type ExecutionStreamPayloadBase = Record<string, unknown> & {
   executionId?: string;
 };
 
-type ExecutionStepPayloadBase = ExecutionStreamPayloadBase & {
-  stepId?: string | null;
-  stepKey?: string;
+type ExecutionOperationPayloadBase = ExecutionStreamPayloadBase & {
+  operationId?: string | null;
+  operationKey?: string;
   resourceSlug?: string;
-  op?: string;
+  kind?: string;
 };
 
 export type ExecutionStartedPayload = ExecutionStreamPayloadBase & {
   mode?: string;
 };
 
-export type StepStartedPayload = ExecutionStepPayloadBase;
+export type OperationStartedPayload = ExecutionOperationPayloadBase;
 
-export type StepCompletedPayload = ExecutionStepPayloadBase & {
+export type OperationCompletedPayload = ExecutionOperationPayloadBase & {
   status?: string;
   error?: unknown;
   blockedBy?: string[];
@@ -660,16 +667,16 @@ type ExecutionStreamEventBase<
 };
 
 export type ExecutionStartedEvent = ExecutionStreamEventBase<"execution.started", ExecutionStartedPayload>;
-export type StepStartedEvent = ExecutionStreamEventBase<"step.started", StepStartedPayload>;
-export type StepCompletedEvent = ExecutionStreamEventBase<"step.completed", StepCompletedPayload>;
+export type OperationStartedEvent = ExecutionStreamEventBase<"operation.started", OperationStartedPayload>;
+export type OperationCompletedEvent = ExecutionStreamEventBase<"operation.completed", OperationCompletedPayload>;
 export type ExecutionCompletedEvent = ExecutionStreamEventBase<"execution.completed", ExecutionTerminalPayload>;
 export type ExecutionCancelledEvent = ExecutionStreamEventBase<"execution.cancelled", ExecutionTerminalPayload>;
 export type ExecutionFailedEvent = ExecutionStreamEventBase<"execution.failed", ExecutionTerminalPayload>;
 
 export type ExecutionStreamEvent =
   | ExecutionStartedEvent
-  | StepStartedEvent
-  | StepCompletedEvent
+  | OperationStartedEvent
+  | OperationCompletedEvent
   | ExecutionCompletedEvent
   | ExecutionCancelledEvent
   | ExecutionFailedEvent;
@@ -692,7 +699,7 @@ export type ApplyChangeApprovalRequiredResponse = {
   kind: "approval_required";
   reviewUrl: string;
   change: { shortId: string; status: string };
-  preview?: ChangePreviewResponse | null;
+  preview?: ChangeDetailResponse | null;
 };
 
 export type ApplyChangeStartedResponse = {

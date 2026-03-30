@@ -470,12 +470,11 @@ function summarizeOperations(operations: Array<{ status: string }>): ChangeSumma
   for (const operation of operations) {
     switch (operation.status) {
       case "pending":
-      case "queued":
+      case "planned":
         counts.pending += 1;
         break;
       case "running":
       case "applying":
-      case "planned":
         counts.running += 1;
         break;
       case "failed":
@@ -502,7 +501,6 @@ function operationStatusWeight(status: string): number {
     case "applying":
       return 2;
     case "pending":
-    case "queued":
     case "planned":
       return 3;
     default:
@@ -724,7 +722,7 @@ export function buildChangePreviewView(response: ChangePreviewInput): ChangePrev
           ? "warning"
           : "valid";
       return {
-        operationId: operation.operationId,
+        operationId: operation.operationId ?? operation.id ?? operation.opKey ?? operation.resourceSlug,
         slug: operation.resourceSlug,
         kind: operation.kind,
         status,
@@ -759,15 +757,15 @@ export function buildOperationDetailView(args: {
   const blockedBy = asBlockedBy(operation.blockedBy);
   const diff = selectAuthoritativeChangeRows(operation, preview);
   const timeline: OperationTimelineEntry[] = [];
-  if (operation.startedAt) timeline.push({ label: "step started" });
+  if (operation.startedAt) timeline.push({ label: "operation started" });
   if (blockedBy.length > 0) timeline.push({ label: `blocked by ${blockedBy.join(", ")}` });
   if (failure) timeline.push({ label: failure.message });
-  if (operation.finishedAt && !failure && blockedBy.length === 0) timeline.push({ label: "step completed" });
+  if (operation.finishedAt && !failure && blockedBy.length === 0) timeline.push({ label: "operation completed" });
   if (timeline.length === 0) {
     const executionStep = latestExecution?.steps.find((step) => step.id === operation.stepId)
       ?? latestExecution?.steps.find((step) => operation.opKey && step.stepKey === operation.opKey)
       ?? latestExecution?.steps.find((step) => !operation.stepId && !operation.opKey && step.resourceSlug === operation.resourceSlug);
-    if (executionStep?.status) timeline.push({ label: `step ${executionStep.status}` });
+    if (executionStep?.status) timeline.push({ label: `operation ${executionStep.status}` });
   }
   return {
     kind: "operation.detail",

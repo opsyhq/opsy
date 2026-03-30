@@ -80,7 +80,9 @@ describe("noun-first command contracts", () => {
     expect(instructions).toContain("Zero-start flow");
     expect(instructions).toContain("aws:s3/bucket:Bucket");
     expect(instructions).toContain("opsy_schema list/get");
-    expect(instructions).toContain("Reach for opsy_schema list/get only when the exact type token, field names, or field types are unclear.");
+    expect(instructions).toContain("Reach for opsy_schema list/get only when the exact type token, field names, field types, or nested shape are unclear.");
+    expect(instructions).toContain("Use memory and known Pulumi syntax first");
+    expect(instructions).toContain("Schema responses come from Pulumi/provider metadata");
     expect(instructions).toContain("opsy_resource create/update/delete preview first unless autoApply=true");
     expect(instructions).toContain('"kind"');
     expect(instructions).toContain('"dependsOn":["<slug>"]');

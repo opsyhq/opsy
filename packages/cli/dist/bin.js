@@ -2900,7 +2900,7 @@ var init_commands = __esm(() => {
       id: "change.discard",
       path: ["change", "discard"],
       usage: "opsy change discard <shortId>",
-      summary: "Discard a change."
+      summary: "Discard a change. `dismiss` is an alias."
     }),
     command({
       id: "change.retry",
@@ -2956,20 +2956,27 @@ var init_commands = __esm(() => {
         "Use this only when you need help finding the exact type token before creating or updating a resource."
       ],
       nextSteps: [
-        "Run `opsy schema get <type-token>` only if field names or types are still unclear."
+        "Run `opsy schema get <type-token>` only if field names, nested shape, or required references are still unclear."
       ]
     }),
     command({
       id: "schema.get",
       path: ["schema", "get"],
-      usage: "opsy schema get <type-token>",
-      summary: "Show compact field types for one resource schema.",
+      usage: "opsy schema get <type-token> [--detailed]",
+      summary: "Show compact field types for one resource schema. Use --detailed only when compact output is insufficient.",
+      flags: flags({ name: "detailed", description: "Return nested Pulumi/provider schema shape for this type instead of the compact flattened map." }),
       examples: [
         "opsy schema get cloudflare:index/zone:Zone",
-        "opsy schema get aws:ec2/vpc:Vpc"
+        "opsy schema get aws:ec2/vpc:Vpc",
+        "opsy schema get aws:cloudfront/distribution:Distribution --detailed"
       ],
       whenToUse: [
-        "Use this after `schema list` only when field names, field types, or required references are uncertain."
+        "Use this after `schema list` only when field names, field types, nested shape, or required references are uncertain.",
+        "Prefer known Pulumi syntax first when the shape is already obvious."
+      ],
+      notes: [
+        "Schema responses come from Pulumi/provider metadata, not curated Opsy examples.",
+        "Compact mode is the default because full nested schemas can be large. Use `--detailed` only when the compact map is insufficient."
       ],
       nextSteps: [
         "Return to `opsy resource create ... --type <type-token>` or `opsy change create ... --mutations <json>` with the schema details in hand."
@@ -3836,30 +3843,6 @@ function renderChangeDetail(view) {
   return lines.join(`
 `);
 }
-function renderChangePreview(view) {
-  const lines = [
-    renderHeader("Preview", view.change.shortId),
-    renderHeader("Status", view.change.status),
-    renderHeader("Summary", view.change.summary ?? "-"),
-    renderHeader("Plan", formatCountSummary(view.plan)),
-    "",
-    "Operations"
-  ];
-  for (const operation of view.operations) {
-    lines.push(`- ${operation.slug.padEnd(15)} ${operation.kind.padEnd(8)} ${operation.status}`);
-    for (const change of operation.changes) {
-      lines.push(`  ${change.path}: ${formatUnknown(change.before)} -> ${formatUnknown(change.after)}`);
-    }
-    if (operation.replacementFields.length > 0) {
-      lines.push(`  replaces: ${operation.replacementFields.join(", ")}`);
-    }
-    for (const validation of operation.validation) {
-      lines.push(`  validation: ${validation}`);
-    }
-  }
-  return lines.join(`
-`);
-}
 function renderApplyProgress(view) {
   const lines = [
     renderHeader("Applying", view.change.shortId),
@@ -4231,6 +4214,17 @@ function getExecutionErrorMessage(error) {
   }
   return null;
 }
+function resolveKnownOperationSlug(payload, operationIds, operationsBySlug) {
+  const operationId = typeof payload.operationId === "string" ? payload.operationId : null;
+  if (operationId) {
+    return operationIds.get(operationId) ?? null;
+  }
+  const resourceSlug = typeof payload.resourceSlug === "string" ? payload.resourceSlug : null;
+  if (!resourceSlug || !operationsBySlug.has(resourceSlug)) {
+    return null;
+  }
+  return resourceSlug;
+}
 async function fetchChangeDetailView2(deps, shortId, flags2) {
   const token = deps.getToken(flags2);
   const apiUrl = deps.getApiUrl(flags2);
@@ -4244,12 +4238,12 @@ function createChangeCommand(deps = defaultCliDeps) {
       const project = requireProjectValue(this, opts.project);
       const token = deps.getToken(flags2);
       const apiUrl = deps.getApiUrl(flags2);
-      const changes = await deps.apiRequest(`/projects/${project}/changes${flags2.json ? buildQuery({ view: "raw" }) : ""}`, { token, apiUrl });
+      const response = await deps.apiRequest(`/projects/${project}/changes${flags2.json ? buildQuery({ view: "raw" }) : ""}`, { token, apiUrl });
       if (flags2.json)
-        return output(changes, flags2);
-      if (!changes.length)
+        return output(response, flags2);
+      if (!response.items.length)
         return deps.log("No changes found.");
-      deps.log(renderChangeSummaryTable(changes));
+      deps.log(renderChangeSummaryTable(response.items));
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -4327,7 +4321,7 @@ function createChangeCommand(deps = defaultCliDeps) {
       const data = await deps.apiRequest(path, { method: "POST", token, apiUrl });
       if (flags2.json)
         return output(data, flags2);
-      deps.log(renderChangePreview(data));
+      deps.log(renderChangeDetail(data));
     } catch (error) {
       handleCliError(error, deps);
     }
@@ -4350,6 +4344,7 @@ function createChangeCommand(deps = defaultCliDeps) {
         error: operation.error,
         blockedBy: operation.blockedBy
       }]));
+      const operationIds = new Map(initial.operations.flatMap((operation) => operation.operationId ? [[operation.operationId, operation.slug]] : []));
       const started = await deps.apiRequest(`/changes/${changeShortId}/apply`, { method: "POST", token, apiUrl });
       if (started.kind === "approval_required") {
         const result = started;
@@ -4365,21 +4360,27 @@ function createChangeCommand(deps = defaultCliDeps) {
         reconnect: true
       })) {
         const event = JSON.parse(message.data);
-        if (event.type === "step.started") {
-          const slug = String(event.payload.resourceSlug ?? "");
-          const kind = String(event.payload.op ?? "unknown");
-          const current = opMap.get(slug) ?? { slug, kind, status: "pending", error: null, blockedBy: [] };
+        if (event.type === "operation.started") {
+          const slug = resolveKnownOperationSlug(event.payload, operationIds, opMap);
+          if (!slug) {
+            continue;
+          }
+          const current = opMap.get(slug);
+          const kind = String(event.payload.kind ?? event.payload.op ?? current.kind ?? "unknown");
           current.kind = kind;
           current.status = "running";
           opMap.set(slug, current);
           deps.log(`- ${slug} ${kind} running`);
-        } else if (event.type === "step.completed") {
-          const slug = String(event.payload.resourceSlug ?? "");
-          const kind = String(event.payload.op ?? "unknown");
+        } else if (event.type === "operation.completed") {
+          const slug = resolveKnownOperationSlug(event.payload, operationIds, opMap);
+          if (!slug) {
+            continue;
+          }
+          const current = opMap.get(slug);
+          const kind = String(event.payload.kind ?? event.payload.op ?? current.kind ?? "unknown");
           const blockedBy = Array.isArray(event.payload.blockedBy) ? event.payload.blockedBy.filter((value) => typeof value === "string") : [];
           const errorMessage = getExecutionErrorMessage(event.payload.error);
           const error = errorMessage ? { message: errorMessage } : null;
-          const current = opMap.get(slug) ?? { slug, kind, status: "pending", error: null, blockedBy: [] };
           current.kind = kind;
           current.status = String(event.payload.status ?? "succeeded");
           current.error = error;
@@ -4414,11 +4415,11 @@ function createChangeCommand(deps = defaultCliDeps) {
       const final = renderApplyProgress({
         ...resultView,
         counts: {
-          pending: [...opMap.values()].filter((operation) => operation.status === "pending" || operation.status === "queued").length,
+          pending: [...opMap.values()].filter((operation) => operation.status === "pending" || operation.status === "planned").length,
           running: [...opMap.values()].filter((operation) => operation.status === "running").length,
           failed: [...opMap.values()].filter((operation) => operation.status === "failed").length,
           blocked: [...opMap.values()].filter((operation) => operation.status === "blocked").length,
-          succeeded: [...opMap.values()].filter((operation) => !["pending", "queued", "running", "failed", "blocked"].includes(operation.status)).length
+          succeeded: [...opMap.values()].filter((operation) => !["pending", "planned", "running", "failed", "blocked"].includes(operation.status)).length
         },
         operations: [...opMap.values()]
       });
@@ -4428,7 +4429,7 @@ function createChangeCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["change", "apply"]);
-  addSharedHelp(changeCmd.command("discard").description("Discard one change").argument("[shortId]").action(async function(shortId) {
+  addSharedHelp(changeCmd.command("dismiss").alias("discard").description("Dismiss one preview-only change").argument("[shortId]").action(async function(shortId) {
     const flags2 = getRootFlags(this);
     try {
       const changeShortId = requireArgumentValue(shortId, "change shortId");
@@ -4561,12 +4562,15 @@ function createSchemaCommand(deps = defaultCliDeps) {
       handleCliError(error, deps);
     }
   }), ["schema", "list"]);
-  addSharedHelp(schemaCmd.command("get").description("Get one resource schema").argument("<token>").action(async function(tokenArg) {
+  addSharedHelp(schemaCmd.command("get").description("Get one resource schema").argument("<token>").option("--detailed", "Return nested Pulumi/provider schema shape when compact output is insufficient").action(async function(tokenArg, opts) {
     const flags2 = getRootFlags(this);
     const token = deps.getToken(flags2);
     const apiUrl = deps.getApiUrl(flags2);
     try {
-      output(await deps.apiRequest(`/schemas/describe?type=${encodeURIComponent(tokenArg)}`, { token, apiUrl }), flags2);
+      const query = new URLSearchParams({ type: tokenArg });
+      if (opts.detailed)
+        query.set("detailed", "true");
+      output(await deps.apiRequest(`/schemas/describe?${query.toString()}`, { token, apiUrl }), flags2);
     } catch (error) {
       handleCliError(error, deps);
     }

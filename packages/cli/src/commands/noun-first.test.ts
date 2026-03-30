@@ -251,6 +251,45 @@ describe("noun-first CLI surface", () => {
     expect(logs.join("\n")).toContain("https://example.com/review");
   });
 
+  test("change list renders paginated API results", async () => {
+    const logs: string[] = [];
+    const program = createProgram([createChangeCommand({
+      ...createDeps(),
+      apiRequest: async () => ({
+        items: [{
+          shortId: "abcd1234",
+          status: "previewed",
+          summary: "Queued convenience change",
+          createdAt: new Date().toISOString(),
+          previewSummary: {},
+          counts: { pending: 1, running: 0, failed: 0, blocked: 0, succeeded: 0 },
+        }],
+        nextCursor: null,
+      }),
+      log: (message?: string) => logs.push(String(message ?? "")),
+    })]);
+
+    await program.parseAsync(["node", "opsy", "change", "list", "--project", "acme"], { from: "node" });
+
+    expect(logs.join("\n")).toContain("abcd1234");
+    expect(logs.join("\n")).toContain("Queued convenience change");
+  });
+
+  test("change dismiss aliases discard and hits dismiss endpoint", async () => {
+    const requests: Array<{ path: string; method: string | undefined }> = [];
+    const program = createProgram([createChangeCommand({
+      ...createDeps(),
+      apiRequest: async (path: string, opts: any) => {
+        requests.push({ path, method: opts?.method });
+        return { shortId: "abcd1234", status: "dismissed" };
+      },
+    })]);
+
+    await program.parseAsync(["node", "opsy", "change", "dismiss", "abcd1234"], { from: "node" });
+
+    expect(requests).toEqual([{ path: "/changes/abcd1234/dismiss", method: "POST" }]);
+  });
+
   test("change get prefers blocker text and keeps header spacing", async () => {
     const logs: string[] = [];
     const program = createProgram([createChangeCommand({
@@ -487,15 +526,18 @@ describe("noun-first CLI surface", () => {
     const program = createProgram([createChangeCommand({
       ...createDeps(),
       apiRequest: async () => ({
-        kind: "change.preview",
+        kind: "change.detail",
         change: {
           shortId: "abcd1234",
           status: "previewed",
           summary: "Preview change",
+          createdAt: new Date().toISOString(),
+          previewSummary: { read: 0, same: 0, delete: 1, create: 0 },
+          approvalRequired: false,
+          counts: { pending: 1, running: 0, failed: 0, blocked: 0, succeeded: 0 },
+          warnings: [],
         },
-        plan: { read: 0, same: 0, delete: 1, create: 0 },
         operations: [],
-        impacts: [],
       }),
       log: (message?: string) => logs.push(String(message ?? "")),
     })]);
@@ -549,7 +591,7 @@ describe("noun-first CLI surface", () => {
       },
       apiStream: async function* () {
         yield {
-          event: "step.started",
+          event: "operation.started",
           data: JSON.stringify({
             id: "exec-1:1",
             executionId: "exec-1",
@@ -558,12 +600,12 @@ describe("noun-first CLI surface", () => {
             projectSlug: "acme",
             sequence: 1,
             timestamp: new Date().toISOString(),
-            type: "step.started",
-            payload: { resourceSlug: "bucket", op: "create" },
+            type: "operation.started",
+            payload: { resourceSlug: "bucket", kind: "create" },
           }),
         };
         yield {
-          event: "step.completed",
+          event: "operation.completed",
           data: JSON.stringify({
             id: "exec-1:2",
             executionId: "exec-1",
@@ -572,8 +614,8 @@ describe("noun-first CLI surface", () => {
             projectSlug: "acme",
             sequence: 2,
             timestamp: new Date().toISOString(),
-            type: "step.completed",
-            payload: { resourceSlug: "bucket", op: "create", status: "succeeded" },
+            type: "operation.completed",
+            payload: { resourceSlug: "bucket", kind: "create", status: "succeeded" },
           }),
         };
         yield {
@@ -597,6 +639,131 @@ describe("noun-first CLI surface", () => {
     await program.parseAsync(["node", "opsy", "change", "apply", "abcd1234"], { from: "node" });
 
     expect(logs.join("\n").match(/Applying\s+abcd1234/g) ?? []).toHaveLength(1);
+  });
+
+  test("change apply ignores unmatched scoped stream events", async () => {
+    const logs: string[] = [];
+    const program = createProgram([createChangeCommand({
+      ...createDeps(),
+      apiRequest: async (path: string) => {
+        if (path === "/changes/abcd1234") {
+          return {
+            kind: "change.detail",
+            change: {
+              shortId: "abcd1234",
+              status: "previewed",
+              summary: "Targeted apply",
+              createdAt: new Date().toISOString(),
+              previewSummary: { update: 1 },
+              counts: { pending: 1, running: 0, failed: 0, blocked: 0, succeeded: 0 },
+              warnings: [],
+            },
+            operations: [
+              {
+                operationId: "op-distribution",
+                slug: "distribution",
+                kind: "update",
+                status: "planned",
+                resourceType: "aws:cloudfront/distribution:Distribution",
+                dependsOn: ["bucket"],
+                changes: [],
+                error: null,
+                blockedBy: [],
+              },
+            ],
+          };
+        }
+        return {
+          kind: "started",
+          executionId: "exec-1",
+          changeShortId: "abcd1234",
+          targetSlugs: ["distribution"],
+        };
+      },
+      apiStream: async function* () {
+        yield {
+          event: "operation.started",
+          data: JSON.stringify({
+            id: "exec-1:1",
+            executionId: "exec-1",
+            changeId: "change-1",
+            changeShortId: "abcd1234",
+            projectSlug: "acme",
+            sequence: 1,
+            timestamp: new Date().toISOString(),
+            type: "operation.started",
+            payload: { resourceSlug: "site", kind: "same" },
+          }),
+        };
+        yield {
+          event: "operation.started",
+          data: JSON.stringify({
+            id: "exec-1:2",
+            executionId: "exec-1",
+            changeId: "change-1",
+            changeShortId: "abcd1234",
+            projectSlug: "acme",
+            sequence: 2,
+            timestamp: new Date().toISOString(),
+            type: "operation.started",
+            payload: { operationId: "op-distribution", resourceSlug: "distribution", kind: "update" },
+          }),
+        };
+        yield {
+          event: "operation.completed",
+          data: JSON.stringify({
+            id: "exec-1:3",
+            executionId: "exec-1",
+            changeId: "change-1",
+            changeShortId: "abcd1234",
+            projectSlug: "acme",
+            sequence: 3,
+            timestamp: new Date().toISOString(),
+            type: "operation.completed",
+            payload: { resourceSlug: "bucket", kind: "same", status: "succeeded" },
+          }),
+        };
+        yield {
+          event: "operation.completed",
+          data: JSON.stringify({
+            id: "exec-1:4",
+            executionId: "exec-1",
+            changeId: "change-1",
+            changeShortId: "abcd1234",
+            projectSlug: "acme",
+            sequence: 4,
+            timestamp: new Date().toISOString(),
+            type: "operation.completed",
+            payload: { operationId: "op-distribution", resourceSlug: "distribution", kind: "update", status: "succeeded" },
+          }),
+        };
+        yield {
+          event: "execution.completed",
+          data: JSON.stringify({
+            id: "exec-1:5",
+            executionId: "exec-1",
+            changeId: "change-1",
+            changeShortId: "abcd1234",
+            projectSlug: "acme",
+            sequence: 5,
+            timestamp: new Date().toISOString(),
+            type: "execution.completed",
+            payload: { status: "succeeded" },
+          }),
+        };
+      },
+      log: (message?: string) => logs.push(String(message ?? "")),
+    })]);
+
+    await program.parseAsync(["node", "opsy", "change", "apply", "abcd1234"], { from: "node" });
+
+    const output = logs.join("\n");
+    expect(output).toContain("- distribution update running");
+    expect(output).toContain("- distribution update succeeded");
+    expect(output).not.toContain("site");
+    expect(output).not.toContain("bucket");
+    expect(output).not.toContain("unknown");
+    expect(output).toContain("Succeeded: 1");
   });
 
   test("resource diff shows the ID and suppresses phantom root rows", async () => {
@@ -660,7 +827,7 @@ describe("noun-first CLI surface", () => {
         id: "op-1",
         slug: "policy",
         kind: "update",
-        status: "queued",
+        status: "planned",
         changeShortId: "abcd1234",
         resourceType: "aws:s3/bucketPolicy:BucketPolicy",
         dependsOn: ["public-access-block"],
@@ -669,7 +836,7 @@ describe("noun-first CLI surface", () => {
       outcome: {
         startedAt: null,
         finishedAt: null,
-        result: "queued",
+        result: "planned",
       },
       failure: null,
       blocker: null,

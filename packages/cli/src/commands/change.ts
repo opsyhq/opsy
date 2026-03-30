@@ -3,7 +3,6 @@ import type {
   ApplyChangeResponse,
   ApplyProgressView,
   ChangeDetailView,
-  ChangePreviewView,
   ChangeSummaryRow,
   ExecutionStreamEvent,
   NormalizedError,
@@ -21,7 +20,7 @@ import {
   type CliDeps,
 } from "./common";
 import { apiStream as defaultApiStream } from "../client";
-import { renderApplyProgress, renderChangeDetail, renderChangePreview, renderChangeSummaryTable } from "../display";
+import { renderApplyProgress, renderChangeDetail, renderChangeSummaryTable } from "../display";
 import { output } from "../output";
 
 function getExecutionErrorMessage(error: unknown): string | null {
@@ -32,6 +31,24 @@ function getExecutionErrorMessage(error: unknown): string | null {
     return error.message;
   }
   return null;
+}
+
+function resolveKnownOperationSlug(
+  payload: ExecutionStreamEvent["payload"],
+  operationIds: Map<string, string>,
+  operationsBySlug: Map<string, { slug: string; kind: string; status: string; error: NormalizedError | null; blockedBy: string[] }>,
+): string | null {
+  const operationId = typeof payload.operationId === "string" ? payload.operationId : null;
+  if (operationId) {
+    return operationIds.get(operationId) ?? null;
+  }
+
+  const resourceSlug = typeof payload.resourceSlug === "string" ? payload.resourceSlug : null;
+  if (!resourceSlug || !operationsBySlug.has(resourceSlug)) {
+    return null;
+  }
+
+  return resourceSlug;
 }
 
 async function fetchChangeDetailView(
@@ -57,13 +74,13 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
           const project = requireProjectValue(this, opts.project);
           const token = deps.getToken(flags);
           const apiUrl = deps.getApiUrl(flags);
-          const changes = await deps.apiRequest<ChangeSummaryRow[]>(
+          const response = await deps.apiRequest<{ items: ChangeSummaryRow[]; nextCursor: string | null }>(
             `/projects/${project}/changes${flags.json ? buildQuery({ view: "raw" }) : ""}`,
             { token, apiUrl },
           );
-          if (flags.json) return output(changes, flags);
-          if (!changes.length) return deps.log("No changes found.");
-          deps.log(renderChangeSummaryTable(changes));
+          if (flags.json) return output(response, flags);
+          if (!response.items.length) return deps.log("No changes found.");
+          deps.log(renderChangeSummaryTable(response.items));
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -169,7 +186,7 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
           const path = `/changes/${changeShortId}/preview${flags.json ? buildQuery({ view: "raw" }) : ""}`;
           const data = await deps.apiRequest<any>(path, { method: "POST", token, apiUrl });
           if (flags.json) return output(data, flags);
-          deps.log(renderChangePreview(data as ChangePreviewView));
+          deps.log(renderChangeDetail(data as ChangeDetailView));
         } catch (error) {
           handleCliError(error, deps);
         }
@@ -199,6 +216,9 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
             error: operation.error,
             blockedBy: operation.blockedBy,
           }]));
+          const operationIds = new Map(initial.operations.flatMap((operation) =>
+            operation.operationId ? [[operation.operationId, operation.slug] as const] : [],
+          ));
           const started = await deps.apiRequest<ApplyChangeResponse>(`/changes/${changeShortId}/apply`, { method: "POST", token, apiUrl });
           if (started.kind === "approval_required") {
             const result = started as { change: { shortId: string }; reviewUrl: string };
@@ -214,17 +234,24 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
             reconnect: true,
           })) {
             const event = JSON.parse(message.data) as ExecutionStreamEvent;
-            if (event.type === "step.started") {
-              const slug = String(event.payload.resourceSlug ?? "");
-              const kind = String(event.payload.op ?? "unknown");
-              const current = opMap.get(slug) ?? { slug, kind, status: "pending", error: null as NormalizedError | null, blockedBy: [] as string[] };
+            if (event.type === "operation.started") {
+              const slug = resolveKnownOperationSlug(event.payload, operationIds, opMap);
+              if (!slug) {
+                continue;
+              }
+              const current = opMap.get(slug)!;
+              const kind = String(event.payload.kind ?? (event.payload as { op?: unknown }).op ?? current.kind ?? "unknown");
               current.kind = kind;
               current.status = "running";
               opMap.set(slug, current);
               deps.log(`- ${slug} ${kind} running`);
-            } else if (event.type === "step.completed") {
-              const slug = String(event.payload.resourceSlug ?? "");
-              const kind = String(event.payload.op ?? "unknown");
+            } else if (event.type === "operation.completed") {
+              const slug = resolveKnownOperationSlug(event.payload, operationIds, opMap);
+              if (!slug) {
+                continue;
+              }
+              const current = opMap.get(slug)!;
+              const kind = String(event.payload.kind ?? (event.payload as { op?: unknown }).op ?? current.kind ?? "unknown");
               const blockedBy = Array.isArray(event.payload.blockedBy)
                 ? event.payload.blockedBy.filter((value): value is string => typeof value === "string")
                 : [];
@@ -232,7 +259,6 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
               const error = errorMessage
                 ? { message: errorMessage }
                 : null;
-              const current = opMap.get(slug) ?? { slug, kind, status: "pending", error: null as NormalizedError | null, blockedBy: [] as string[] };
               current.kind = kind;
               current.status = String(event.payload.status ?? "succeeded");
               current.error = error;
@@ -267,11 +293,11 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
           const final = renderApplyProgress({
             ...resultView,
             counts: {
-              pending: [...opMap.values()].filter((operation) => operation.status === "pending" || operation.status === "queued").length,
+              pending: [...opMap.values()].filter((operation) => operation.status === "pending" || operation.status === "planned").length,
               running: [...opMap.values()].filter((operation) => operation.status === "running").length,
               failed: [...opMap.values()].filter((operation) => operation.status === "failed").length,
               blocked: [...opMap.values()].filter((operation) => operation.status === "blocked").length,
-              succeeded: [...opMap.values()].filter((operation) => !["pending", "queued", "running", "failed", "blocked"].includes(operation.status)).length,
+              succeeded: [...opMap.values()].filter((operation) => !["pending", "planned", "running", "failed", "blocked"].includes(operation.status)).length,
             },
             operations: [...opMap.values()],
           });
@@ -285,8 +311,9 @@ export function createChangeCommand(deps: CliDeps = defaultCliDeps) {
   );
 
   addSharedHelp(
-    changeCmd.command("discard")
-      .description("Discard one change")
+    changeCmd.command("dismiss")
+      .alias("discard")
+      .description("Dismiss one preview-only change")
       .argument("[shortId]")
       .action(async function (this: Command, shortId?: string) {
         const flags = getRootFlags(this);
