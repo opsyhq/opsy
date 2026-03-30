@@ -141,6 +141,8 @@ export async function* parseSseStream(
 export type FetchSseOptions = {
   url: string;
   init?: RequestInit;
+  /** Called on every connection attempt (including reconnects). Merged with `init`; takes precedence. */
+  getInit?: () => RequestInit | Promise<RequestInit>;
   fetch?: typeof globalThis.fetch;
   signal?: AbortSignal;
   lastEventId?: string | null;
@@ -188,56 +190,80 @@ export async function* fetchSse(options: FetchSseOptions): AsyncGenerator<SseMes
   const reconnectDelayMs = options.reconnectDelayMs ?? 1_000;
 
   while (!options.signal?.aborted) {
-    const headers = mergeHeaders(options.init?.headers, { Accept: "text/event-stream" });
-    if (lastEventId) {
-      headers.set("Last-Event-ID", lastEventId);
-    }
+    try {
+      const dynamicInit = options.getInit ? await options.getInit() : undefined;
+      const headers = mergeHeaders(
+        options.init?.headers,
+        dynamicInit?.headers,
+        { Accept: "text/event-stream" },
+      );
+      if (lastEventId) {
+        headers.set("Last-Event-ID", lastEventId);
+      }
 
-    const response = await fetchImpl(options.url, {
-      ...options.init,
-      headers,
-      signal: options.signal,
-    });
+      const response = await fetchImpl(options.url, {
+        ...options.init,
+        ...dynamicInit,
+        headers,
+        signal: options.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(`SSE response ${response.status}`);
-    }
-    if (!response.body) {
-      throw new Error("SSE response has no body.");
-    }
+      if (!response.ok) {
+        if (response.status >= 400 && response.status < 500) {
+          throw new Error(`SSE response ${response.status}`);
+        }
+        // 5xx — retriable
+        throw Object.assign(new Error(`SSE response ${response.status}`), { retriable: true });
+      }
+      if (!response.body) {
+        throw new Error("SSE response has no body.");
+      }
 
-    for await (const event of parseSseStream(response.body, options.signal)) {
-      if (event.id) {
-        lastEventId = event.id;
-        const separator = event.id.lastIndexOf(":");
-        const streamId = separator > 0 ? event.id.slice(0, separator) : null;
-        const sequenceText = separator > 0 ? event.id.slice(separator + 1) : null;
-        if (streamId && sequenceText && /^\d+$/.test(sequenceText)) {
-          const sequence = Number.parseInt(sequenceText, 10);
-          if (sequence <= (highestSequenceByStream.get(streamId) ?? 0)) {
-            continue;
-          }
-          highestSequenceByStream.set(streamId, sequence);
-        } else {
-          if (seenEventIds.has(event.id)) {
-            continue;
-          }
-          seenEventIds.add(event.id);
-          seenEventIdQueue.push(event.id);
-          if (seenEventIdQueue.length > maxSeenEventIds) {
-            const evictedId = seenEventIdQueue.shift();
-            if (evictedId) {
-              seenEventIds.delete(evictedId);
+      for await (const event of parseSseStream(response.body, options.signal)) {
+        if (event.id) {
+          lastEventId = event.id;
+          const separator = event.id.lastIndexOf(":");
+          const streamId = separator > 0 ? event.id.slice(0, separator) : null;
+          const sequenceText = separator > 0 ? event.id.slice(separator + 1) : null;
+          if (streamId && sequenceText && /^\d+$/.test(sequenceText)) {
+            const sequence = Number.parseInt(sequenceText, 10);
+            if (sequence <= (highestSequenceByStream.get(streamId) ?? 0)) {
+              continue;
+            }
+            highestSequenceByStream.set(streamId, sequence);
+          } else {
+            if (seenEventIds.has(event.id)) {
+              continue;
+            }
+            seenEventIds.add(event.id);
+            seenEventIdQueue.push(event.id);
+            if (seenEventIdQueue.length > maxSeenEventIds) {
+              const evictedId = seenEventIdQueue.shift();
+              if (evictedId) {
+                seenEventIds.delete(evictedId);
+              }
             }
           }
         }
+        yield event;
       }
-      yield event;
-    }
 
-    if (!reconnect || options.signal?.aborted) {
-      return;
+      // Stream ended normally — reconnect if enabled
+      if (!reconnect || options.signal?.aborted) {
+        return;
+      }
+      await delay(reconnectDelayMs, options.signal);
+    } catch (error) {
+      if (options.signal?.aborted) {
+        return;
+      }
+      // Network errors (TypeError) and 5xx responses are retriable
+      const isRetriable = error instanceof TypeError
+        || (error as { retriable?: boolean })?.retriable === true;
+      if (!reconnect || !isRetriable) {
+        throw error;
+      }
+      await delay(reconnectDelayMs, options.signal);
     }
-    await delay(reconnectDelayMs, options.signal);
   }
 }

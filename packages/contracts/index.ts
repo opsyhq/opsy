@@ -578,6 +578,7 @@ export type RealtimeEventEntity = typeof REALTIME_EVENT_ENTITIES[number];
 
 export const REALTIME_EVENT_ACTIONS = [
   "apply_started",
+  "change_approved",
   "change_awaiting_approval",
   "change_created",
   "change_dismissed",
@@ -589,6 +590,7 @@ export const REALTIME_EVENT_ACTIONS = [
   "integration_bound",
   "integration_unbound",
   "preview_started",
+  "project_created",
   "project_deleted",
   "project_restored",
   "project_updated",
