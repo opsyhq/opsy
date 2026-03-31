@@ -204,6 +204,7 @@ export type ChangePresentationPayload = {
   parentChanged?: boolean;
   dependencyChanged?: boolean;
   inputChanges?: boolean;
+  warnings?: string[];
   customTimeouts?: CustomTimeouts | null;
   providerId?: string | null;
   forget?: boolean;

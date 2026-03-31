@@ -36,11 +36,16 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
 
   addSharedHelp(
     resourceCmd.command("list")
-      .description("List resources")
+      .description("List resources. Defaults to root resources; use --all for a flat list or --parent with --recursive for a subtree.")
       .option("--project <slug>", "Project slug")
       .option("--parent <slug>", "Parent resource slug")
+      .option("--all", "Return a flat list of all managed resources")
+      .option("--recursive", "When used with --parent, include all descendants")
       .option("--detailed", "Return full resource detail objects")
-      .action(async function (this: Command, opts: { project?: string; parent?: string; detailed?: boolean }) {
+      .action(async function (
+        this: Command,
+        opts: { project?: string; parent?: string; all?: boolean; recursive?: boolean; detailed?: boolean },
+      ) {
         const flags = getRootFlags(this);
         try {
           const project = requireProjectValue(this, opts.project);
@@ -48,6 +53,8 @@ export function createResourceCommand(deps: CliDeps = defaultCliDeps) {
           const apiUrl = deps.getApiUrl(flags);
           const path = `/projects/${project}/resources${buildQuery({
             parent: opts.parent,
+            all: opts.all ? "true" : undefined,
+            recursive: opts.recursive ? "true" : undefined,
             view: flags.json || opts.detailed ? "raw" : undefined,
           })}`;
           const resources = await deps.apiRequest<any[]>(path, { token, apiUrl });

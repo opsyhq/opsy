@@ -19,7 +19,9 @@ opsy resource list --project <project-slug>
 opsy resource get <resource-slug> --project <project-slug>
 ```
 
-`resource list` returns root resources first. Add `--parent <slug>` to walk down the tree.
+`resource list` returns root resources first. Add `--all` for a flat list of every managed resource in the project, or use `--parent <slug>` to walk down the tree. Add `--recursive` together with `--parent <slug>` when you want the full descendant subtree in one call.
+
+Interpolation refs in resource inputs support both direct output fields like `${vpc.id}` and indexed array output paths like `${frontend-cert.domainValidationOptions[0].resourceRecordName}`.
 
 Use `--parent <slug>` on `resource create` and `resource update` to organize resources under another resource. In change mutation JSON, use `"parent":"<slug>"`. If you want a folder-like container with no cloud object, create a virtual `group` resource first and then parent resources under it.
 

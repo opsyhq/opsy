@@ -13,6 +13,7 @@ describe("noun-first command contracts", () => {
     expect(help).toContain("1. `opsy auth login --token <pat>`");
     expect(help).toContain("2. `opsy project list`");
     expect(help).toContain("`opsy resource list --project <slug>` returns root resources first.");
+    expect(help).toContain("Add `--all` for a flat project-wide list");
     expect(help).toContain("Mutation paths:");
     expect(help).toContain("`opsy resource forget`");
     expect(help).toContain("pass `--auto-apply` to apply immediately");
@@ -89,6 +90,7 @@ describe("noun-first command contracts", () => {
     expect(instructions).toContain('"targetDependents":true');
     expect(instructions).toContain('"customTimeouts"');
     expect(instructions).toContain('type:"group"');
+    expect(instructions).toContain("${frontend-cert.domainValidationOptions[0].resourceRecordName}");
     expect(instructions).toContain("MCP authentication is handled by the client session");
   });
 });

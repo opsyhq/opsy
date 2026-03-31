@@ -52,6 +52,7 @@ describe("noun-first CLI surface", () => {
     expect(help).toContain("1. `opsy auth login --token <pat>`");
     expect(help).toContain("2. `opsy project list`");
     expect(help).toContain("resource list --project <slug>` returns root resources first");
+    expect(help).toContain("Add `--all` for a flat project-wide list");
     expect(help).toContain("Use `opsy change create` for reviewable drafts");
     expect(help).toContain("`opsy resource forget`");
     expect(help).toContain("pass `--auto-apply` to apply immediately");

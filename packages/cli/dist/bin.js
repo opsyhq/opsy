@@ -2539,20 +2539,23 @@ var init_commands = __esm(() => {
     command({
       id: "resource.list",
       path: ["resource", "list"],
-      usage: "opsy resource list --project <project> [--parent <slug>] [--detailed]",
-      summary: "List resources in a project. With no `--parent`, Opsy returns root resources first.",
-      flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "parent", value: "<slug>", description: "List only the children under one resource slug." }, { name: "detailed", description: "Return full resource records instead of compact list rows." }),
+      usage: "opsy resource list --project <project> [--all] [--parent <slug>] [--recursive] [--detailed]",
+      summary: "List resources in a project. Default output is root resources; use `--all` for a flat project-wide list or `--parent` with `--recursive` for a descendant subtree.",
+      flags: flags({ name: "project", value: "<project>", required: true, description: "Project slug." }, { name: "all", description: "Return a flat list of all managed resources in the project." }, { name: "parent", value: "<slug>", description: "List only the children under one resource slug." }, { name: "recursive", description: "With `--parent`, include all descendants instead of just direct children." }, { name: "detailed", description: "Return full resource records instead of compact list rows." }),
       examples: [
         "opsy resource list --project acme",
-        "opsy resource list --project acme --parent network"
+        "opsy resource list --project acme --all",
+        "opsy resource list --project acme --parent network",
+        "opsy resource list --project acme --parent network --recursive"
       ],
       whenToUse: [
         "Use this as the default read-first entry point before `resource get`, `change create`, or one-off resource mutations.",
-        "Traverse the tree top-down: roots first, then add `--parent <slug>` when you want to drill into children."
+        "Traverse the tree top-down: roots first, then add `--parent <slug>` when you want to drill into children.",
+        "Use `--all` when you need a flat audit of every managed resource in the project."
       ],
       nextSteps: [
         "Run `opsy resource get <slug> --project <slug>` for one returned resource.",
-        "Use `--parent <slug>` with one returned root slug to keep traversing the tree."
+        "Use `--parent <slug>` with one returned root slug to keep traversing the tree, or `--recursive` when you want the whole subtree in one call."
       ]
     }),
     command({
@@ -3086,7 +3089,8 @@ var init_commands = __esm(() => {
     "",
     "Resource traversal:",
     "  `opsy resource list --project <slug>` returns root resources first.",
-    "  Add `--parent <slug>` to walk down the tree one level at a time.",
+    "  Add `--all` for a flat project-wide list, or add `--parent <slug>` to walk down the tree.",
+    "  Add `--recursive` together with `--parent <slug>` when you want the full descendant subtree in one call.",
     "",
     "Mutation paths:",
     "  Use `opsy change create` for reviewable drafts and multi-step work.",
@@ -3887,7 +3891,7 @@ async function fetchChangeDetailView(deps, shortId, flags2) {
 }
 function createResourceCommand(deps = defaultCliDeps) {
   const resourceCmd = new Command("resource").description("List, inspect, and mutate resources");
-  addSharedHelp(resourceCmd.command("list").description("List resources").option("--project <slug>", "Project slug").option("--parent <slug>", "Parent resource slug").option("--detailed", "Return full resource detail objects").action(async function(opts) {
+  addSharedHelp(resourceCmd.command("list").description("List resources. Defaults to root resources; use --all for a flat list or --parent with --recursive for a subtree.").option("--project <slug>", "Project slug").option("--parent <slug>", "Parent resource slug").option("--all", "Return a flat list of all managed resources").option("--recursive", "When used with --parent, include all descendants").option("--detailed", "Return full resource detail objects").action(async function(opts) {
     const flags2 = getRootFlags(this);
     try {
       const project = requireProjectValue(this, opts.project);
@@ -3895,6 +3899,8 @@ function createResourceCommand(deps = defaultCliDeps) {
       const apiUrl = deps.getApiUrl(flags2);
       const path = `/projects/${project}/resources${buildQuery({
         parent: opts.parent,
+        all: opts.all ? "true" : undefined,
+        recursive: opts.recursive ? "true" : undefined,
         view: flags2.json || opts.detailed ? "raw" : undefined
       })}`;
       const resources = await deps.apiRequest(path, { token, apiUrl });

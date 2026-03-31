@@ -96,24 +96,29 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
   command({
     id: "resource.list",
     path: ["resource", "list"],
-    usage: "opsy resource list --project <project> [--parent <slug>] [--detailed]",
-    summary: "List resources in a project. With no `--parent`, Opsy returns root resources first.",
+    usage: "opsy resource list --project <project> [--all] [--parent <slug>] [--recursive] [--detailed]",
+    summary: "List resources in a project. Default output is root resources; use `--all` for a flat project-wide list or `--parent` with `--recursive` for a descendant subtree.",
     flags: flags(
       { name: "project", value: "<project>", required: true, description: "Project slug." },
+      { name: "all", description: "Return a flat list of all managed resources in the project." },
       { name: "parent", value: "<slug>", description: "List only the children under one resource slug." },
+      { name: "recursive", description: "With `--parent`, include all descendants instead of just direct children." },
       { name: "detailed", description: "Return full resource records instead of compact list rows." },
     ),
     examples: [
       "opsy resource list --project acme",
+      "opsy resource list --project acme --all",
       "opsy resource list --project acme --parent network",
+      "opsy resource list --project acme --parent network --recursive",
     ],
     whenToUse: [
       "Use this as the default read-first entry point before `resource get`, `change create`, or one-off resource mutations.",
       "Traverse the tree top-down: roots first, then add `--parent <slug>` when you want to drill into children.",
+      "Use `--all` when you need a flat audit of every managed resource in the project.",
     ],
     nextSteps: [
       "Run `opsy resource get <slug> --project <slug>` for one returned resource.",
-      "Use `--parent <slug>` with one returned root slug to keep traversing the tree.",
+      "Use `--parent <slug>` with one returned root slug to keep traversing the tree, or `--recursive` when you want the whole subtree in one call.",
     ],
   }),
   command({
@@ -720,7 +725,8 @@ const TOP_LEVEL_HELP = [
   "",
   "Resource traversal:",
   "  `opsy resource list --project <slug>` returns root resources first.",
-  "  Add `--parent <slug>` to walk down the tree one level at a time.",
+  "  Add `--all` for a flat project-wide list, or add `--parent <slug>` to walk down the tree.",
+  "  Add `--recursive` together with `--parent <slug>` when you want the full descendant subtree in one call.",
   "",
   "Mutation paths:",
   "  Use `opsy change create` for reviewable drafts and multi-step work.",
@@ -889,7 +895,7 @@ export function renderServerInstructions(): string {
     'Resource and change `inputs` follow Pulumi property names for each type (example: `aws:s3/bucket:Bucket` with `{"bucket":"my-bucket"}`). Reach for opsy_schema list/get only when the exact type token, field names, field types, or nested shape are unclear.',
     "Use memory and known Pulumi syntax first when the shape is already obvious. opsy_schema get is compact by default; request detailed schema only when compact output is insufficient. Schema responses come from Pulumi/provider metadata, not curated Opsy examples.",
     'Use `parent` on resource mutations to organize resources, and `dependsOn` for explicit dependency ordering. In change mutation JSON, every mutation object must include `"kind"` and must be one of `"create"`, `"update"`, `"delete"`, `"import"`, or `"forget"`. Use `"parent":"<slug>"` for hierarchy, `"dependsOn":["<slug>"]` for explicit dependency ordering when no input ref expresses the dependency, and `"targetDependents":true` only on `"forget"` to cascade state-only removal from the requested root to graph dependents. `"customTimeouts":{"create":"30m","update":"20m","delete":"10m"}` is supported on `create`, `update`, and `import`. `delete` mutations can override only `"delete"`. `forget` does not support `customTimeouts`. Create `type:"group"` first when you need a virtual container.',
-    'Use `${slug.outputField}` in `inputs` to reference another resource\'s outputs (e.g. `{"vpcId":"${vpc.id}"}`). Opsy resolves refs at apply time and executes operations in dependency order; explicit `dependsOn` is only needed when no input ref already expresses the dependency.',
+    'Use `${slug.outputField}` in `inputs` to reference another resource\'s outputs (e.g. `{"vpcId":"${vpc.id}"}` or `{"name":"${frontend-cert.domainValidationOptions[0].resourceRecordName}"}`). Indexed array output paths like `${slug.arr[0].field}` are supported. Opsy resolves refs at apply time and executes operations in dependency order; explicit `dependsOn` is only needed when no input ref already expresses the dependency.',
     "MCP authentication is handled by the client session, not by opsy_admin login.",
     "Pass help: true to any tool to see command-specific usage.",
   ].join("\n");
