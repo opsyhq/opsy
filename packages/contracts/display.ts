@@ -2,6 +2,7 @@ import type {
   ChangeOperationRecord,
   ChangePreviewOperation,
   ExecutionRecord,
+  ResourceLockRecord,
   ResourceRecord,
   StableChangeRow,
 } from "./index";
@@ -38,6 +39,7 @@ export type ResourceSummaryRow = {
   parentSlug: string | null;
   childCount: number;
   providerId: string | null;
+  lock?: ResourceLockRecord | null;
 };
 
 export type OutcomeSummary = {
@@ -58,6 +60,7 @@ export type ResourceDetailView = {
     syncState: string;
     providerId: string | null;
     dependsOn: string[];
+    lock?: ResourceLockRecord | null;
   };
   intent: ValueRow[];
   problem: DeltaRow[];
@@ -574,6 +577,7 @@ export function buildResourceSummaryRows(resources: ResourceRecord[]): ResourceS
     parentSlug: (resource as ResourceRecord & { parentSlug?: string | null }).parentSlug ?? null,
     childCount: (resource as ResourceRecord & { childCount?: number }).childCount ?? 0,
     providerId: getProviderId(resource),
+    lock: resource.lock ?? null,
   }));
 }
 
@@ -590,6 +594,7 @@ export function buildResourceDetailView(resource: ResourceRecord, operations?: C
       syncState: resource.syncState,
       providerId: getProviderId(resource),
       dependsOn: resource.dependsOn,
+      lock: resource.lock ?? null,
     },
     intent: buildIntentRows(resource.inputs, resolvedInputs),
     problem,

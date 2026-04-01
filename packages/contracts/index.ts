@@ -324,6 +324,15 @@ export type ExecutionJournalEntryRecord = {
   createdAt: string;
 };
 
+export type ResourceLockRecord = {
+  held: boolean;
+  mode: "read" | "write";
+  ownerKind: "execution" | "resource_action" | "watch";
+  changeShortId?: string | null;
+  executionId?: string | null;
+  expiresAt: string | null;
+};
+
 export type ExecutionRecord = {
   id: string;
   changeId: string | null;
@@ -338,6 +347,7 @@ export type ExecutionRecord = {
   previewSummary?: unknown;
   errorSummary?: unknown;
   requestedBy?: ActorRecord | null;
+  locks?: ResourceLockRecord[];
   startedAt?: string | null;
   finishedAt?: string | null;
   steps: ExecutionStepRecord[];
@@ -365,6 +375,7 @@ export type ChangeRecord = {
   remainingTargets?: string[];
   activeExecutionId?: string | null;
   activeTargetSlugs?: string[];
+  activeLocks?: ResourceLockRecord[];
   previewSummary?: unknown;
   derivedFromChangeId?: string | null;
   derivationKind?: string | null;
@@ -420,6 +431,7 @@ export type ResourceRecord = {
   dependsOn: string[];
   customTimeouts?: CustomTimeouts | null;
   conflict: ResourceConflictSnapshot | null;
+  lock?: ResourceLockRecord | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -555,6 +555,25 @@ export const OPSY_COMMAND_SPECS: CommandSpec[] = [
     ],
   }),
   command({
+    id: "execution.unlock",
+    path: ["execution", "unlock"],
+    usage: "opsy execution unlock <executionId> [--force]",
+    summary: "Emergency-release resource locks owned by one execution.",
+    flags: flags(
+      { name: "force", description: "Release locks even if the execution lease still appears live." },
+    ),
+    examples: [
+      "opsy execution unlock 00000000-0000-0000-0000-000000000000",
+      "opsy execution unlock 00000000-0000-0000-0000-000000000000 --force",
+    ],
+    whenToUse: [
+      "Use this only when a stale or wedged execution still owns resource locks and normal cancellation/recovery did not clear them.",
+    ],
+    nextSteps: [
+      "Inspect the execution or change again before starting a new apply on the same resources.",
+    ],
+  }),
+  command({
     id: "integration.list",
     path: ["integration", "list"],
     usage: "opsy integration list",
