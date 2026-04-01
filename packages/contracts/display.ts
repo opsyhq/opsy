@@ -1,10 +1,13 @@
 import type {
+  ChangeClass,
   ChangeOperationRecord,
   ChangePreviewOperation,
   ExecutionRecord,
   ResourceLockRecord,
   ResourceRecord,
+  SourceChangeRow,
   StableChangeRow,
+  StateChangeRow,
 } from "./index";
 
 export type DisplayView = "summary" | "detail" | "raw";
@@ -114,6 +117,9 @@ export type ChangeOperationSummaryRow = {
   resourceType: string;
   dependsOn: string[];
   changes: StableChangeRow[];
+  changeClass?: ChangeClass;
+  stateChanges: StateChangeRow[];
+  sourceChanges: SourceChangeRow[];
   error: NormalizedError | null;
   blockedBy: string[];
 };
@@ -141,6 +147,9 @@ export type ChangePreviewRow = {
   kind: string;
   status: ChangePreviewRowStatus;
   changes: StableChangeRow[];
+  changeClass?: ChangeClass;
+  stateChanges: StateChangeRow[];
+  sourceChanges: SourceChangeRow[];
   replacementFields: string[];
   validation: string[];
 };
@@ -206,6 +215,10 @@ export type OperationDetailView = {
     blockedBy: string[];
     reason: string | null;
   } | null;
+  changeClass?: ChangeClass;
+  propertyDiff: StableChangeRow[];
+  stateChanges: StateChangeRow[];
+  sourceChanges: SourceChangeRow[];
   diff: StableChangeRow[];
   timeline: OperationTimelineEntry[];
   advanced: {
@@ -453,9 +466,13 @@ function buildIntentRows(templateInputs: Record<string, unknown>, resolvedInputs
 function previewSummaryToRecord(summary: unknown): Record<string, number> {
   if (!isPlainObject(summary)) return {};
   if (isPlainObject(summary.byOp)) {
-    return Object.fromEntries(
+    const byOp = Object.fromEntries(
       Object.entries(summary.byOp).filter(([, value]) => typeof value === "number"),
     ) as Record<string, number>;
+    if (typeof summary.stateOnlyCount === "number") {
+      byOp.stateOnlyCount = summary.stateOnlyCount;
+    }
+    return byOp;
   }
   return Object.fromEntries(
     Object.entries(summary).filter(([, value]) => typeof value === "number"),
@@ -556,16 +573,43 @@ export function selectAuthoritativeChangeRows(
   return preview ? preview.changes : operation.changes;
 }
 
+export function selectAuthoritativeStateChanges(
+  operation: Pick<ChangeOperationRecord, "stateChanges">,
+  preview?: Pick<ChangePreviewOperation, "stateChanges"> | null,
+): StateChangeRow[] {
+  return preview ? (preview.stateChanges ?? []) : (operation.stateChanges ?? []);
+}
+
+export function selectAuthoritativeSourceChanges(
+  operation: Pick<ChangeOperationRecord, "sourceChanges">,
+  preview?: Pick<ChangePreviewOperation, "sourceChanges"> | null,
+): SourceChangeRow[] {
+  return preview ? (preview.sourceChanges ?? []) : (operation.sourceChanges ?? []);
+}
+
+export function selectAuthoritativeChangeClass(
+  operation: Pick<ChangeOperationRecord, "changeClass">,
+  preview?: Pick<ChangePreviewOperation, "changeClass"> | null,
+): ChangeClass | undefined {
+  return preview ? preview.changeClass : operation.changeClass;
+}
+
 function isMeaningfulOperationForDisplay(
-  operation: Pick<ChangeOperationRecord, "kind" | "changes">,
+  operation: Pick<ChangeOperationRecord, "kind" | "changes" | "stateChanges" | "sourceChanges">,
 ): boolean {
-  return operation.kind !== "same" || operation.changes.length > 0;
+  return operation.kind !== "same"
+    || operation.changes.length > 0
+    || (operation.stateChanges ?? []).length > 0
+    || (operation.sourceChanges ?? []).length > 0;
 }
 
 function isMeaningfulPreviewOperationForDisplay(
-  operation: Pick<ChangePreviewOperation, "kind" | "changes">,
+  operation: Pick<ChangePreviewOperation, "kind" | "changes" | "stateChanges" | "sourceChanges">,
 ): boolean {
-  return operation.kind !== "same" || operation.changes.length > 0;
+  return operation.kind !== "same"
+    || operation.changes.length > 0
+    || (operation.stateChanges ?? []).length > 0
+    || (operation.sourceChanges ?? []).length > 0;
 }
 
 export function buildResourceSummaryRows(resources: ResourceRecord[]): ResourceSummaryRow[] {
@@ -696,6 +740,9 @@ export function buildChangeDetailView(response: ChangeDetailInput): ChangeDetail
       resourceType: operation.resourceType,
       dependsOn: operation.mutation?.dependsOn ?? [],
       changes: selectAuthoritativeChangeRows(operation),
+      changeClass: selectAuthoritativeChangeClass(operation),
+      stateChanges: selectAuthoritativeStateChanges(operation),
+      sourceChanges: selectAuthoritativeSourceChanges(operation),
       error: normalizeError({
         message: operation.error,
         code: operation.errorCode,
@@ -732,6 +779,9 @@ export function buildChangePreviewView(response: ChangePreviewInput): ChangePrev
         kind: operation.kind,
         status,
         changes: selectAuthoritativeChangeRows(operation),
+        changeClass: selectAuthoritativeChangeClass(operation),
+        stateChanges: selectAuthoritativeStateChanges(operation),
+        sourceChanges: selectAuthoritativeSourceChanges(operation),
         replacementFields,
         validation,
       };
@@ -760,7 +810,9 @@ export function buildOperationDetailView(args: {
     blockedBy: operation.blockedBy,
   });
   const blockedBy = asBlockedBy(operation.blockedBy);
-  const diff = selectAuthoritativeChangeRows(operation, preview);
+  const propertyDiff = selectAuthoritativeChangeRows(operation, preview);
+  const stateChanges = selectAuthoritativeStateChanges(operation, preview);
+  const sourceChanges = selectAuthoritativeSourceChanges(operation, preview);
   const timeline: OperationTimelineEntry[] = [];
   if (operation.startedAt) timeline.push({ label: "operation started" });
   if (blockedBy.length > 0) timeline.push({ label: `blocked by ${blockedBy.join(", ")}` });
@@ -796,7 +848,11 @@ export function buildOperationDetailView(args: {
           reason: failure?.details ?? failure?.message ?? null,
         }
       : null,
-    diff,
+    changeClass: selectAuthoritativeChangeClass(operation, preview),
+    propertyDiff,
+    stateChanges,
+    sourceChanges,
+    diff: propertyDiff,
     timeline,
     advanced: {
       inputProps: operation.inputProps ?? null,

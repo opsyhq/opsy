@@ -171,6 +171,23 @@ export type StableChangeRow = {
   afterSourceExpression?: string | null;
 };
 
+export type StateChangeRow = {
+  path: "parent" | "dependsOn";
+  type: "updated";
+  before: string | string[] | null;
+  after: string | string[] | null;
+};
+
+export type SourceChangeRow = {
+  path: string;
+  before?: StableChangeValue;
+  after?: StableChangeValue;
+  beforeSourceExpression?: string | null;
+  afterSourceExpression?: string | null;
+};
+
+export type ChangeClass = "provider" | "state_only" | "mixed";
+
 export type ChangeSourceBinding = {
   path: string;
   sourceExpression: string;
@@ -188,7 +205,11 @@ export type ChangePresentationPayload = {
     before?: Record<string, ChangeSourceBinding>;
     after?: Record<string, ChangeSourceBinding>;
   };
-  presentationChanges: StableChangeRow[];
+  changeClass?: ChangeClass;
+  propertyChanges?: StableChangeRow[];
+  stateChanges?: StateChangeRow[];
+  sourceChanges?: SourceChangeRow[];
+  presentationChanges?: StableChangeRow[];
   previewComplete?: boolean;
   unresolvedRefs?: string[];
   providerDiff?: {
@@ -228,6 +249,9 @@ export type ChangeOperationRecord = {
   resourceType: string;
   error: string | null;
   changes: StableChangeRow[];
+  changeClass?: ChangeClass;
+  stateChanges?: StateChangeRow[];
+  sourceChanges?: SourceChangeRow[];
   diff: ChangePresentationPayload | null;
   inputProps?: unknown;
   outputProps?: unknown;
@@ -275,6 +299,9 @@ export type ChangePreviewOperation = {
   kind: string;
   status?: string;
   changes: StableChangeRow[];
+  changeClass?: ChangeClass;
+  stateChanges?: StateChangeRow[];
+  sourceChanges?: SourceChangeRow[];
   diff: ChangePresentationPayload | null;
   intentInputs?: Record<string, unknown> | null;
   resolvedInputs?: Record<string, unknown> | null;
