@@ -1,0 +1,8 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0",
+	"q": "bucket",
+	"kind": "resource",
+	"limit": 25,
+	"offset": 10
+}

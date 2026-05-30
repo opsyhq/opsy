@@ -1,0 +1,5 @@
+{
+	"plan_destroy": true,
+	"get_provider_schema_optional": true,
+	"move_resource_state": false
+}

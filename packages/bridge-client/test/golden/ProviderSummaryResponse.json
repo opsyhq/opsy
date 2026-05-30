@@ -1,0 +1,17 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0",
+	"resource_count": 2,
+	"data_source_count": 1,
+	"server_capabilities": {
+		"plan_destroy": true,
+		"get_provider_schema_optional": false,
+		"move_resource_state": true
+	},
+	"diagnostics": [
+		{
+			"severity": "warning",
+			"summary": "deprecated field"
+		}
+	]
+}

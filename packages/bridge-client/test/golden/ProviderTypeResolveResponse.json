@@ -1,0 +1,6 @@
+{
+	"type": "aws_s3_bucket",
+	"kinds": ["resource", "data"],
+	"resource_path": "resources/aws_s3_bucket.json",
+	"data_source_path": "data-sources/aws_s3_bucket.json"
+}

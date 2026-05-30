@@ -1,0 +1,3 @@
+ALTER TABLE "resources" ALTER COLUMN "provider" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "resources" ALTER COLUMN "integration_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "resources" ADD CONSTRAINT "resources_provider_backed_check" CHECK (("resources"."provider" IS NULL AND "resources"."integration_id" IS NULL) OR ("resources"."provider" IS NOT NULL AND "resources"."integration_id" IS NOT NULL));

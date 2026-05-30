@@ -1,0 +1,13 @@
+{
+	"schema": {
+		"version": 0,
+		"block": {
+			"attributes": {
+				"region": {
+					"type": "string",
+					"optional": true
+				}
+			}
+		}
+	}
+}

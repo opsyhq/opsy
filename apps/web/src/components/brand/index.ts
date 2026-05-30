@@ -1,0 +1,1 @@
+export { OpsyLogo } from "./OpsyLogo"

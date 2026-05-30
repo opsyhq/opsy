@@ -1,0 +1,6 @@
+{
+	"severity": "error",
+	"summary": "something went wrong",
+	"detail": "detailed message",
+	"attribute": ["root", "config", "region"]
+}

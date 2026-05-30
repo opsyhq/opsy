@@ -1,0 +1,6 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0",
+	"type": "aws_s3_bucket",
+	"kind": "resource"
+}

@@ -1,0 +1,63 @@
+{
+	"name": "@opsy/api",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/app.ts",
+			"import": "./dist/app.js"
+		}
+	},
+	"scripts": {
+		"dev": "nitro dev",
+		"dev:workflow": "nitro dev",
+		"typecheck": "tsc --noEmit",
+		"build": "nitro build",
+		"build:workflow": "nitro build",
+		"test": "bun test src --env-file .env.test",
+		"test:db:setup": "bun run --env-file .env.test drizzle-kit migrate",
+		"workflow:postgres:setup": "workflow-postgres-setup",
+		"auth:generate": "bun run --env-file .env bunx @better-auth/cli@latest generate --config src/auth/config.ts --output src/lib/db/schema/auth.ts --y",
+		"gen:policies": "bun run scripts/gen-policy-registry.ts",
+		"relationship-rules:regenerate": "bun run --env-file .env scripts/regenerate-relationship-rules.ts",
+		"relationship-rules:evaluate-candidate": "bun run --env-file .env scripts/evaluate-relationship-rules-candidate.ts",
+		"field-layout:evaluate-candidate": "bun run --env-file .env scripts/evaluate-field-layout-candidate.ts",
+		"type-metadata:evaluate-candidate": "bun run --env-file .env scripts/evaluate-type-metadata-candidate.ts",
+		"type-metadata:regenerate": "bun run --env-file .env scripts/regenerate-type-metadata.ts",
+		"db:generate": "bun run --env-file .env drizzle-kit generate",
+		"db:migrate": "bun run --env-file .env drizzle-kit migrate",
+		"db:encrypt-credentials": "bun run --env-file .env scripts/encrypt-existing-credentials.ts",
+		"db:migrate-aws-credentials-source": "bun run --env-file .env scripts/migrate-aws-credentials-source.ts",
+		"db:seed:auth-skip": "bun run --env-file .env scripts/seed-auth-skip.ts",
+		"db:studio": "bun run --env-file .env drizzle-kit studio"
+	},
+	"dependencies": {
+		"@ai-sdk/azure": "3.0.53",
+		"@aws-sdk/client-athena": "^3.0.0",
+		"@aws-sdk/client-s3": "^3.0.0",
+		"@aws-sdk/client-sesv2": "^3.0.0",
+		"@better-auth/api-key": "^1.6.9",
+		"@better-auth/oauth-provider": "^1.6.9",
+		"@hono/zod-validator": "^0.7.6",
+		"@opsy/bridge-client": "workspace:*",
+		"@opsy/contracts": "workspace:*",
+		"@opsy/provider": "workspace:*",
+		"@opsy/thinking-blocks": "workspace:*",
+		"@workflow/world-postgres": "^4.1.2",
+		"ai": "^6.0.168",
+		"better-auth": "^1.6.9",
+		"drizzle-orm": "^0.45.2",
+		"hono": "^4.12.12",
+		"nitro": "^3.0.260429-beta",
+		"pino": "^10.3.1",
+		"postgres": "^3.4.9",
+		"rollup": "^4.60.3",
+		"workflow": "^4.2.5",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.31.10",
+		"pino-pretty": "^13.1.3"
+	}
+}

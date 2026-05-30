@@ -1,0 +1,454 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776727151543,
+      "tag": "0000_huge_psylocke",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777280786954,
+      "tag": "0001_hot_weapon_omega",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777284095036,
+      "tag": "0002_motionless_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777317405139,
+      "tag": "0003_wonderful_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777373695610,
+      "tag": "0004_next_shooting_star",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1745827200000,
+      "tag": "0005_positions_relative",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777378710984,
+      "tag": "0006_little_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777387080386,
+      "tag": "0007_fuzzy_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777455685179,
+      "tag": "0008_conscious_longshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777460097399,
+      "tag": "0009_square_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777476447140,
+      "tag": "0010_changesets",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777476500000,
+      "tag": "0011_llm_generations",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777553967300,
+      "tag": "0012_adorable_donald_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777556133227,
+      "tag": "0013_small_komodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777557166411,
+      "tag": "0014_ambitious_sersi",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1777560226369,
+      "tag": "0015_careless_lila_cheney",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1777629600000,
+      "tag": "0016_belongs_to_resource_edges",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777630200000,
+      "tag": "0017_relationship_rule_source_value_path_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1777633800000,
+      "tag": "0018_unified_relationship_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777637400000,
+      "tag": "0019_relationship_display",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777638000000,
+      "tag": "0020_relationship_display_repair",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777816800000,
+      "tag": "0021_thinking_blocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777817400000,
+      "tag": "0022_thinking_block_model_calls",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777818000000,
+      "tag": "0023_thinking_block_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777818600000,
+      "tag": "0024_thinking_block_artifacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777819200000,
+      "tag": "0025_thinking_block_runs_trim",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777819800000,
+      "tag": "0026_resource_type_hints_trim",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1777820400000,
+      "tag": "0027_thinking_block_version_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777821000000,
+      "tag": "0028_artifact_native_thinking_blocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1777821600000,
+      "tag": "0029_thinking_block_artifact_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777970679641,
+      "tag": "0030_drop_resource_type_hints",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1777991111018,
+      "tag": "0031_glorious_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1777994711018,
+      "tag": "0032_relationship_refresh_watermark",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777998311018,
+      "tag": "0033_relationship_source_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1778001911018,
+      "tag": "0034_drop_unused_capability_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1778005511018,
+      "tag": "0035_relationship_source_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1778009111018,
+      "tag": "0036_relationship_roles_reset",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1778012711018,
+      "tag": "0037_semantic_relationship_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1778016311018,
+      "tag": "0038_flat_relationship_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1778423606733,
+      "tag": "0039_thinking_block_minimal_versioning",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1778520429201,
+      "tag": "0040_aws_provider_644",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1778679524750,
+      "tag": "0041_resource-edge-source-status-cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1778684886154,
+      "tag": "0042_flatten-provider-surface",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1778751842262,
+      "tag": "0043_workflow-operations",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1778769655842,
+      "tag": "0044_scan-operation",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1778791326446,
+      "tag": "0045_changeset-canceled-statuses",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1778793796170,
+      "tag": "0046_drop-legacy-actions-executions",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1778794492100,
+      "tag": "0047_drop-legacy-event-log",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1778840422337,
+      "tag": "0048_remove_sync_state_conflicts",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1778863532997,
+      "tag": "0049_happy_phil_sheldon",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1778865147924,
+      "tag": "0050_third_micromax",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1778867691570,
+      "tag": "0051_daily_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1778950661768,
+      "tag": "0052_resource-lifecycle-rewrite",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1779016064334,
+      "tag": "0053_resource_drift_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1779016078191,
+      "tag": "0054_resource_outputs",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1779025254596,
+      "tag": "0055_integration_project_unique_slug",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1779027865786,
+      "tag": "0056_credentials_encrypted",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1779379986890,
+      "tag": "0057_reactive-dry-run-cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1779393616554,
+      "tag": "0058_dry-run-action-error",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1779406140118,
+      "tag": "0059_drop_before_rename_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1779707321336,
+      "tag": "0060_drop_resource_edges",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1779795179413,
+      "tag": "0061_integration_credential_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1779824180491,
+      "tag": "0062_resource-status",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1779916776556,
+      "tag": "0063_onboarding_completions",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0",
+	"provider_config": {
+		"key": "value"
+	},
+	"type": "aws_s3_bucket",
+	"prior_state": {
+		"key": "value"
+	},
+	"planned_state": {
+		"key": "value"
+	},
+	"config": {
+		"key": "value"
+	},
+	"planned_private": "Y0hKcGRtRjBaUT09",
+	"requires_replace": [["bucket"], ["region"]]
+}

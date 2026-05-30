@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >-
+  Opsy AWS integration - creates the deploy role Opsy assumes to manage your
+  infrastructure. The role trusts only the Opsy principal and only when the
+  per-integration External ID is presented (double-gated sts:AssumeRole).
+
+# Parameters are prefilled by Opsy's onboarding launch URL (param_<Name>).
+# Nothing here is hardcoded: the External ID is unique per integration, the
+# principal is the Opsy backend identity, and the permissions policy is the
+# single value Opsy chose for the deploy role (override before creating the
+# stack to scope it tighter).
+Parameters:
+  ExternalId:
+    Type: String
+    Description: >-
+      Unique per-integration ID. Opsy must present this exact value to assume
+      the role - it stops another customer tricking Opsy into your account.
+    MinLength: 2
+    NoEcho: true
+
+  OpsyPrincipalArn:
+    Type: String
+    Description: >-
+      The Opsy backend principal allowed to assume this role.
+    MinLength: 12
+
+  PermissionsPolicyArn:
+    Type: String
+    Description: >-
+      Managed policy granting the role its provisioning power. Defaults to the
+      broad policy Opsy recommends; replace with a narrower policy ARN to
+      restrict what Opsy can do in your account.
+    Default: arn:aws:iam::aws:policy/AdministratorAccess
+
+  RoleName:
+    Type: String
+    Description: >-
+      Name for the created role. Keep the opsy- prefix.
+    Default: opsy-deploy
+    AllowedPattern: "opsy-[A-Za-z0-9_+=,.@-]+"
+
+Resources:
+  OpsyDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      Description: Role Opsy assumes to provision and manage infrastructure.
+      # Same shape the onboarding UI's manual trust JSON emits - kept in one
+      # place (built from the two stack params) so the two paths cannot drift.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref OpsyPrincipalArn
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      ManagedPolicyArns:
+        - !Ref PermissionsPolicyArn
+
+Outputs:
+  RoleArn:
+    Description: Paste this ARN back into Opsy's "Role ARN" field.
+    Value: !GetAtt OpsyDeployRole.Arn

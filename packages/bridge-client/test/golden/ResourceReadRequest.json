@@ -1,0 +1,12 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0",
+	"provider_config": {
+		"key": "value"
+	},
+	"type": "aws_s3_bucket",
+	"current_state": {
+		"key": "value"
+	},
+	"private": "Y0hKcGRtRjBaUT09"
+}

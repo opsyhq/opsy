@@ -1,0 +1,16 @@
+{
+	"version": 1,
+	"block": {
+		"attributes": {
+			"bucket": {
+				"type": "string",
+				"required": true
+			},
+			"id": {
+				"type": "string",
+				"computed": true
+			}
+		},
+		"description": "aws_s3_bucket resource"
+	}
+}

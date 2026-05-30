@@ -1,0 +1,25 @@
+{
+	"name": "@opsy/provider",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./field-tree": "./src/field-tree.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@opsy/bridge-client": "workspace:*",
+		"@opsy/contracts": "workspace:*"
+	},
+	"peerDependencies": {
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/bun": "*",
+		"zod": "^4.3.6"
+	}
+}

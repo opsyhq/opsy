@@ -1,0 +1,8 @@
+{
+	"diagnostics": [
+		{
+			"severity": "error",
+			"summary": "invalid config"
+		}
+	]
+}

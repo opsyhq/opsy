@@ -1,0 +1,30 @@
+{
+	"short_name": "Opsy",
+	"name": "Opsy — control plane for cloud infrastructure",
+	"icons": [
+		{
+			"src": "favicon.svg",
+			"type": "image/svg+xml",
+			"sizes": "any"
+		},
+		{
+			"src": "favicon.ico",
+			"sizes": "32x32",
+			"type": "image/x-icon"
+		},
+		{
+			"src": "logo192.png",
+			"type": "image/png",
+			"sizes": "192x192"
+		},
+		{
+			"src": "logo512.png",
+			"type": "image/png",
+			"sizes": "512x512"
+		}
+	],
+	"start_url": ".",
+	"display": "standalone",
+	"theme_color": "#08090a",
+	"background_color": "#08090a"
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "integrations" ALTER COLUMN "credentials" DROP DEFAULT;

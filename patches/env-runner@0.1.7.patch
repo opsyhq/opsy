@@ -1,0 +1,50 @@
+diff --git a/dist/runners/bun-process/runner.mjs b/dist/runners/bun-process/runner.mjs
+index 8aaef22febb582a5f976b1bab4e7fd46584757a1..97469bf7f47a48c922e628b0e5a592994be1498e 100644
+--- a/dist/runners/bun-process/runner.mjs
++++ b/dist/runners/bun-process/runner.mjs
+@@ -69,8 +69,8 @@ var BunProcessEnvRunner = class extends BaseEnvRunner {
+ 			env,
+ 			stdio: [
+ 				"pipe",
+-				"pipe",
+-				"pipe"
++				"inherit",
++				"inherit"
+ 			],
+ 			ipc: (message) => {
+ 				this._handleMessage(message);
+@@ -94,8 +94,8 @@ var BunProcessEnvRunner = class extends BaseEnvRunner {
+ 			env,
+ 			stdio: [
+ 				"pipe",
+-				"pipe",
+-				"pipe",
++				"inherit",
++				"inherit",
+ 				"ipc"
+ 			]
+ 		});
+diff --git a/dist/runners/bun-process/worker.mjs b/dist/runners/bun-process/worker.mjs
+--- a/dist/runners/bun-process/worker.mjs
++++ b/dist/runners/bun-process/worker.mjs
+@@ -24,6 +24,8 @@ if (entry.upgrade) server.node?.server?.on("upgrade", (req, socket, head) => {
+ });
+ if (entry.ipc) await entry.ipc.onOpen?.({ sendMessage });
+ process.send({ address: parseServerAddress(server) });
++// Exit when supervisor dies (graceful or crash) to avoid orphan workers.
++process.on("disconnect", () => process.exit(0));
+ process.on("message", async (message) => {
+ 	if (message?.event === "shutdown") {
+ 		Promise.resolve(entry.ipc?.onClose?.()).then(() => server.close()).then(() => {
+diff --git a/dist/runners/node-process/worker.mjs b/dist/runners/node-process/worker.mjs
+--- a/dist/runners/node-process/worker.mjs
++++ b/dist/runners/node-process/worker.mjs
+@@ -24,6 +24,8 @@ if (entry.upgrade) server.node?.server?.on("upgrade", (req, socket, head) => {
+ });
+ if (entry.ipc) await entry.ipc.onOpen?.({ sendMessage });
+ process.send({ address: parseServerAddress(server) });
++// Exit when supervisor dies (graceful or crash) to avoid orphan workers.
++process.on("disconnect", () => process.exit(0));
+ process.on("message", async (message) => {
+ 	if (message?.event === "shutdown") {
+ 		Promise.resolve(entry.ipc?.onClose?.()).then(() => server.close()).then(() => {

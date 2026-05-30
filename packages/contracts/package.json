@@ -1,0 +1,24 @@
+{
+	"name": "@opsy/contracts",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./errors": "./src/errors/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"effect": "^3.21.2"
+	},
+	"peerDependencies": {
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/bun": "*",
+		"zod": "^4.3.6"
+	}
+}

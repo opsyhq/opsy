@@ -1,0 +1,15 @@
+{
+	"type": "aws_s3_bucket",
+	"kind": "resource",
+	"schema": {
+		"version": 0,
+		"block": {
+			"attributes": {
+				"region": {
+					"type": "string",
+					"optional": true
+				}
+			}
+		}
+	}
+}

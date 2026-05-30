@@ -1,0 +1,26 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "opsy-landing",
+	"compatibility_date": "2026-05-18",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": { "enabled": true },
+	// Environment is selected at BUILD time with the Cloudflare Vite plugin:
+	// `CLOUDFLARE_ENV=staging vite build` flattens this to env.staging, then a
+	// plain `wrangler deploy` ships it. `wrangler deploy --env` is NOT used.
+	// See developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments
+	// `routes` is reconciled by `wrangler deploy`: it must list every
+	// domain/route the per-env worker should serve, or unlisted ones get
+	// dropped. custom_domain:true provisions the DNS record + cert in the
+	// opsy.sh zone (idempotent if the domain already exists on this worker).
+	"env": {
+		"staging": {
+			"name": "opsy-landing-staging",
+			"routes": [{ "pattern": "staging.opsy.sh", "custom_domain": true }]
+		},
+		"production": {
+			"name": "opsy-landing-prod",
+			"routes": [{ "pattern": "opsy.sh", "custom_domain": true }]
+		}
+	}
+}

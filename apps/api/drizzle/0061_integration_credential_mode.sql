@@ -1,0 +1,1 @@
+ALTER TABLE "integrations" ADD COLUMN "credential_mode" text DEFAULT '' NOT NULL;

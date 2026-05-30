@@ -1,0 +1,1 @@
+ALTER TYPE "public"."resource_dry_run_action" ADD VALUE 'error';

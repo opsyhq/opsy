@@ -1,0 +1,10 @@
+{
+	"imported_resources": [
+		{
+			"type_name": "aws_s3_bucket",
+			"state": {
+				"key": "value"
+			}
+		}
+	]
+}

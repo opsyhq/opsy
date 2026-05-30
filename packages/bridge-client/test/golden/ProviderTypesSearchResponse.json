@@ -1,0 +1,13 @@
+{
+	"results": [
+		{
+			"type": "aws_s3_bucket",
+			"kinds": ["resource"]
+		},
+		{
+			"type": "aws_s3_bucket_object",
+			"kinds": ["resource"]
+		}
+	],
+	"truncated": true
+}

@@ -1,0 +1,90 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/dist",
+			"!apps/api/drizzle/meta",
+			"!apps/api/src/lib/db/schema/auth.ts",
+			"!apps/web/src/routeTree.gen.ts",
+			"!apps/landing/src/routeTree.gen.ts",
+			"!bridge/internal/tfplugin5",
+			"!research"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.test.ts", "**/*.unit.test.ts", "**/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNonNullAssertion": "off"
+					},
+					"suspicious": {
+						"noTemplateCurlyInString": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"apps/api/src/**/*.ts",
+				"!apps/api/src/**/routes.ts",
+				"!apps/api/src/middleware/**",
+				"!apps/api/src/main.ts",
+				"!apps/api/src/app.ts",
+				"!apps/api/src/**/__tests__/**",
+				"!apps/api/src/**/*.test.ts"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"hono/http-exception": "Service-layer code must throw OpsyError (Data.TaggedError) from @opsy/contracts/errors so app.onError can map it to the wire format. Routes/middleware are exempt; mark genuine assertions with `// invariant`. See docs/errors.md."
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	],
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"semicolons": "asNeeded"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}

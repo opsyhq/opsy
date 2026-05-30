@@ -1,0 +1,4 @@
+{
+	"provider_source": "hashicorp/aws",
+	"provider_version": "5.0.0"
+}

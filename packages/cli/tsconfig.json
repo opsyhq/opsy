@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"outDir": "dist",
+		"rootDir": "src",
+		"paths": {
+			"@core/*": ["./src/core/*"],
+			"@shell/*": ["./src/shell/*"],
+			"@/*": ["../../apps/api/src/*"]
+		},
+		"types": ["bun"],
+		"noEmit": false
+	},
+	"include": ["src"]
+}

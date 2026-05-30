@@ -1,0 +1,145 @@
+name: Publish CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump for this release (none = publish package.json as-is)"
+        required: true
+        type: choice
+        options: [patch, minor, major, none]
+        default: patch
+
+# contents: write is required to push the version-bump commit back to the
+# branch this workflow was dispatched from. No tags: the bump commit on that
+# branch is the record of what shipped to npm (git log -- packages/cli).
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: publish-cli
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      # One-click release: bump packages/cli/package.json, commit, and push
+      # back to the branch this workflow was dispatched from, then continue
+      # straight through to publish below. `bump=none` skips the bump and
+      # publishes whatever version is currently in package.json — used to
+      # recover when a prior run pushed the bump but failed before publish.
+      - name: Bump version and commit (release)
+        if: ${{ inputs.bump != 'none' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          VERSION=$(cd packages/cli && npm version ${{ inputs.bump }} \
+            --no-git-tag-version | tail -n1)
+          VERSION="${VERSION#v}"
+          git add packages/cli/package.json
+          git commit -m "release(cli): v$VERSION"
+          git push origin "HEAD:${{ github.ref_name }}"
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install monorepo deps
+        run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: pkg
+        run: |
+          VERSION=$(node -p "require('./packages/cli/package.json').version")
+          NAME=$(node -p "require('./packages/cli/package.json').name")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Releasing $NAME@$VERSION"
+
+      - name: Verify version is not already published
+        run: |
+          PKG="${{ steps.pkg.outputs.name }}"
+          VERSION="${{ steps.pkg.outputs.version }}"
+          EXISTS=$(npm view "$PKG@$VERSION" version 2>/dev/null || true)
+          if [[ -n "$EXISTS" ]]; then
+            echo "$PKG@$VERSION is already published."
+            exit 1
+          fi
+
+      - name: Build CLI bundle
+        run: bun run --cwd packages/cli build
+
+      - name: Run tests
+        run: bun run --cwd packages/cli test
+
+      - name: Smoke-test built bundle
+        run: node packages/cli/dist/bin.js --help >/dev/null
+
+      # Stage the publish artifact in a temp dir with a manifest stripped of
+      # workspace deps (they're bundled into dist/bin.js by `bun build`) and
+      # without the dev-only scripts. The monorepo's packages/cli/package.json
+      # stays unchanged.
+      - name: Stage publish artifact
+        run: |
+          mkdir -p /tmp/publish/dist
+          cp packages/cli/dist/bin.js /tmp/publish/dist/bin.js
+          cp packages/cli/README.md /tmp/publish/README.md
+          node - <<'EOF'
+          const fs = require("node:fs")
+          const src = JSON.parse(
+            fs.readFileSync("packages/cli/package.json", "utf8"),
+          )
+          const out = {
+            name: src.name,
+            version: src.version,
+            description:
+              "Opsy CLI — provider-agnostic command-line interface for cloud, built for humans and AI agents.",
+            homepage: "https://opsy.sh",
+            repository: {
+              type: "git",
+              url: "git+https://github.com/opsyhq/opsy.git",
+            },
+            bugs: { url: "https://github.com/opsyhq/opsy/issues" },
+            license: "Apache-2.0",
+            type: "module",
+            publishConfig: { access: "public" },
+            bin: src.bin,
+            files: src.files,
+            scripts: {
+              prepublishOnly:
+                "node -e \"if(!process.env.AUTHORIZED)throw new Error('Refusing publish without AUTHORIZED=1 (CI only).')\"",
+            },
+          }
+          fs.writeFileSync(
+            "/tmp/publish/package.json",
+            `${JSON.stringify(out, null, 2)}\n`,
+          )
+          EOF
+
+      - name: Verify pack
+        working-directory: /tmp/publish
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        working-directory: /tmp/publish
+        env:
+          AUTHORIZED: "1"
+        # opsyhq/opsy-monorepo is private; npm provenance generation requires a
+        # public repo, so it is explicitly disabled. Publish auth still comes
+        # from the npmjs.com Trusted Publisher (OIDC), not a token.
+        run: npm publish --access public --provenance=false
